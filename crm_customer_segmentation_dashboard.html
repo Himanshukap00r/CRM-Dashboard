@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credit Card Customer Segmentation — CRM Analytics Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{
+  --navy:#0F2A43; --navy2:#16395C; --ink:#1A2B3C; --sub:#5B6B7C; --line:#E3E8EC;
+  --bg:#F7F9FB; --card:#FFFFFF;
+  --c1:#2E6F9E; /* Low-Balance Casual Spenders - blue */
+  --c2:#C0472B; /* High-Risk Revolvers - red/coral */
+  --c3:#D68A1D; /* Moderate Utilizers - amber */
+  --c4:#1C7A5E; /* Premium Transactors - teal/green */
+  --c1-bg:#EAF2F8; --c2-bg:#FBEBE7; --c3-bg:#FBF1DF; --c4-bg:#E7F3EF;
+  --shadow: 0 1px 3px rgba(16,34,54,0.08), 0 1px 2px rgba(16,34,54,0.06);
+  --shadow-md: 0 4px 14px rgba(16,34,54,0.10);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.5; font-size:14px;
+}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-0.01em;}
+p{margin:0;}
+::-webkit-scrollbar{height:8px; width:8px;}
+::-webkit-scrollbar-thumb{background:#C7D0D8; border-radius:4px;}
+
+/* ---------- HEADER / NAV ---------- */
+.topbar{
+  background:var(--navy); color:#fff; padding:14px 28px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100; box-shadow:var(--shadow-md);
+}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand-mark{
+  width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#3E7FB0,#1C7A5E);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;
+}
+.brand-text h1{font-size:15.5px; color:#fff;}
+.brand-text span{font-size:11.5px; color:#B9C7D4; display:block; margin-top:1px;}
+.navtabs{display:flex; gap:4px;}
+.navtabs button{
+  background:transparent; border:none; color:#C9D6E1; padding:9px 15px; border-radius:7px;
+  font-size:13.2px; font-weight:500; cursor:pointer; transition:background .15s, color .15s;
+  white-space:nowrap;
+}
+.navtabs button:hover{background:rgba(255,255,255,0.08); color:#fff;}
+.navtabs button.active{background:#fff; color:var(--navy);}
+.topbar-right{display:flex; align-items:center; gap:10px;}
+.pmode-btn{
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff;
+  padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:500; cursor:pointer;
+}
+.pmode-btn:hover{background:rgba(255,255,255,0.18);}
+
+/* ---------- LAYOUT ---------- */
+.page{max-width:1360px; margin:0 auto; padding:26px 28px 60px;}
+.section{display:none;}
+.section.active{display:block; animation:fadein .28s ease;}
+@keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.section-head{margin-bottom:20px;}
+.section-head h2{font-size:21px; color:var(--navy);}
+.section-head p{color:var(--sub); font-size:13px; margin-top:4px;}
+
+/* ---------- KPI CARDS ---------- */
+.kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:22px;}
+.kpi-card{
+  background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px;
+  box-shadow:var(--shadow);
+}
+.kpi-label{font-size:11.5px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+.kpi-value{font-size:26px; font-weight:700; color:var(--navy); margin-top:6px; letter-spacing:-0.02em;}
+.kpi-sub{font-size:12px; color:var(--sub); margin-top:4px;}
+
+/* ---------- GRID / CARD ---------- */
+.grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px;
+  box-shadow:var(--shadow);
+}
+.card h3{font-size:14.5px; color:var(--navy); margin-bottom:2px;}
+.card .cardsub{font-size:12px; color:var(--sub); margin-bottom:12px;}
+.insight-box{
+  background:#F3F7FA; border-left:3px solid var(--navy2); border-radius:6px; padding:10px 13px;
+  font-size:12.5px; color:var(--ink); margin-top:10px;
+}
+.insight-box b{color:var(--navy);}
+
+/* ---------- FINDING CARD ---------- */
+.finding-card{
+  background:linear-gradient(135deg,#FBF1DF,#FBEBE7); border:1px solid #EAD9BE; border-radius:14px;
+  padding:24px 26px; margin-bottom:22px;
+}
+.finding-card h3{font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:#8A5A12; margin-bottom:14px;}
+.finding-stats{display:flex; align-items:center; gap:26px; margin-bottom:14px; flex-wrap:wrap;}
+.finding-stat{text-align:center;}
+.finding-stat .num{font-size:38px; font-weight:800; color:var(--c3); letter-spacing:-0.02em;}
+.finding-stat .lbl{font-size:12px; color:#6B5433; font-weight:600; margin-top:2px;}
+.finding-vs{font-size:20px; color:#B08B4E; font-weight:600;}
+.finding-text{font-size:13.3px; color:#4A3B1E; max-width:840px;}
+.finding-text .tag{
+  display:inline-block; background:#8A5A12; color:#fff; font-size:10.5px; font-weight:700;
+  padding:2px 8px; border-radius:20px; margin-right:8px; letter-spacing:.03em; vertical-align:middle;
+}
+
+/* ---------- TAKEAWAYS ---------- */
+.takeaway-list{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+.takeaway{
+  border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#FCFDFD;
+}
+.takeaway .step{font-size:10.5px; font-weight:700; color:#8C99A6; text-transform:uppercase; letter-spacing:.05em;}
+.takeaway .step span{color:var(--navy2);}
+.takeaway p{font-size:12.8px; margin-top:5px; color:var(--ink);}
+
+/* ---------- SEGMENT CARDS (selector) ---------- */
+.seg-selector{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+.seg-card{
+  border:2px solid var(--line); border-radius:12px; padding:16px 16px 14px; cursor:pointer;
+  background:#fff; transition:all .15s; position:relative;
+}
+.seg-card:hover{box-shadow:var(--shadow-md); transform:translateY(-1px);}
+.seg-card.sel{border-color:var(--dot); box-shadow:var(--shadow-md);}
+.seg-dot{width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:7px;}
+.seg-card .segname{font-size:13.5px; font-weight:700; color:var(--navy);}
+.seg-card .segpct{font-size:22px; font-weight:800; margin-top:8px;}
+.seg-card .segcount{font-size:11.5px; color:var(--sub); margin-top:2px;}
+
+/* ---------- PERSONA ---------- */
+.persona-wrap{display:grid; grid-template-columns:1fr 1.6fr; gap:16px;}
+.persona-head{
+  border-radius:12px; padding:20px; color:#fff;
+}
+.persona-head h2{font-size:19px; margin-bottom:4px;}
+.persona-head .pct{font-size:34px; font-weight:800; margin:10px 0 2px;}
+.persona-head .cnt{font-size:12.5px; opacity:.9;}
+.persona-section{margin-top:16px;}
+.persona-section h4{font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px;}
+.persona-section p{font-size:12.8px; line-height:1.55;}
+.metric-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+.metric{border:1px solid var(--line); border-radius:9px; padding:11px 13px; background:#FCFDFD;}
+.metric .mlbl{font-size:10.8px; color:var(--sub); text-transform:uppercase; letter-spacing:.03em;}
+.metric .mval{font-size:17px; font-weight:700; color:var(--navy); margin-top:3px;}
+.metric .mnote{font-size:11px; color:var(--sub); margin-top:2px;}
+
+/* ---------- TABLE ---------- */
+table.dtable{width:100%; border-collapse:collapse; font-size:12.5px;}
+table.dtable th{
+  text-align:left; padding:9px 10px; background:#F3F6F8; color:var(--navy); font-weight:600;
+  border-bottom:2px solid var(--line); font-size:11.5px; text-transform:uppercase; letter-spacing:.02em;
+}
+table.dtable td{padding:9px 10px; border-bottom:1px solid var(--line); color:var(--ink);}
+table.dtable tr:last-child td{border-bottom:none;}
+
+/* ---------- CHART CONTAINERS ---------- */
+.chart-box{width:100%;}
+.chart-note{font-size:11px; color:var(--sub); font-style:italic; margin-top:6px;}
+
+/* ---------- CRM STRATEGY CARDS ---------- */
+.crm-cards{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+.crm-card{border:1px solid var(--line); border-radius:12px; padding:18px; background:#fff; box-shadow:var(--shadow);}
+.crm-card .crm-head{display:flex; align-items:center; gap:9px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--line);}
+.crm-head .segname{font-size:14.5px; font-weight:700; color:var(--navy);}
+.crm-flow{display:flex; flex-direction:column; gap:8px;}
+.crm-row{display:grid; grid-template-columns:110px 1fr; gap:10px; font-size:12.3px; align-items:start;}
+.crm-row .k{font-weight:700; color:var(--sub); font-size:10.8px; text-transform:uppercase; letter-spacing:.03em; padding-top:1px;}
+.crm-row .v{color:var(--ink);}
+.kpi-chip{display:inline-block; background:#F3F6F8; border:1px solid var(--line); border-radius:20px; padding:2px 10px; font-size:11.3px; font-weight:600; color:var(--navy2);}
+
+/* ---------- PRIORITY MATRIX ---------- */
+.pm-wrap{position:relative; border:1px solid var(--line); border-radius:12px; background:#fff; padding:20px;}
+.pm-grid{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2px; height:380px; background:var(--line); border-radius:8px; overflow:hidden;}
+.pm-cell{background:#FCFDFD; padding:12px; position:relative;}
+.pm-cell-label{font-size:10.5px; font-weight:700; color:#9AA7B2; text-transform:uppercase; letter-spacing:.03em;}
+.pm-chip{
+  display:inline-flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--line);
+  border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; margin:5px 5px 0 0;
+  box-shadow:var(--shadow);
+}
+.pm-axis-x{text-align:center; font-size:11px; color:var(--sub); margin-top:8px; font-weight:600;}
+.pm-axis-y{
+  position:absolute; left:-26px; top:50%; transform:rotate(-90deg) translateX(50%); font-size:11px;
+  color:var(--sub); font-weight:600; white-space:nowrap;
+}
+
+/* ---------- METHODOLOGY FLOW ---------- */
+.flow-wrap{display:flex; flex-direction:column; align-items:center; gap:0; padding:10px 0;}
+.flow-step{
+  width:100%; max-width:480px; background:#fff; border:1.5px solid var(--line); border-radius:10px;
+  padding:12px 18px; text-align:center; box-shadow:var(--shadow);
+}
+.flow-step .ft{font-size:13.5px; font-weight:700; color:var(--navy);}
+.flow-step .fs{font-size:11.5px; color:var(--sub); margin-top:2px;}
+.flow-arrow{font-size:16px; color:#AAB6C0; margin:2px 0;}
+
+/* ---------- RESPONSIBLE AI PANEL ---------- */
+.rai-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+.rai-item{border:1px solid var(--line); border-radius:10px; padding:14px; background:#FCFDFD;}
+.rai-item h4{font-size:12.5px; color:var(--navy); margin-bottom:5px;}
+.rai-item p{font-size:11.8px; color:var(--sub); line-height:1.5;}
+
+/* ---------- FOOTER ---------- */
+.footer{
+  border-top:1px solid var(--line); margin-top:30px; padding-top:20px; color:var(--sub); font-size:11.8px;
+}
+.footer-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:14px;}
+.footer-grid div b{display:block; color:var(--navy); font-size:11.5px; margin-bottom:3px;}
+.footer-note{
+  background:#F3F6F8; border-radius:8px; padding:12px 14px; font-size:11.8px; line-height:1.55;
+}
+
+/* ---------- disclaimer strip ---------- */
+.disclaimer-strip{
+  background:#FFF7EC; border:1px solid #F0DAB0; color:#7A5A18; border-radius:9px; padding:10px 14px;
+  font-size:12px; margin-bottom:18px; display:flex; gap:9px; align-items:flex-start;
+}
+.disclaimer-strip b{color:#5E4110;}
+
+/* ---------- Presentation mode ---------- */
+body.pmode .navtabs, body.pmode .pmode-hide{display:none !important;}
+body.pmode .page{max-width:1600px;}
+body.pmode .kpi-value{font-size:30px;}
+
+/* ---------- misc ---------- */
+.badge{display:inline-block; padding:2px 9px; border-radius:20px; font-size:10.8px; font-weight:700; letter-spacing:.02em;}
+.small{font-size:11.5px; color:var(--sub);}
+.flex-between{display:flex; align-items:center; justify-content:space-between;}
+.legend-row{display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;}
+.legend-item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink);}
+.legend-item .sw{width:10px; height:10px; border-radius:3px;}
+
+@media (max-width: 980px){
+  .kpi-row,.grid2,.grid3,.takeaway-list,.crm-cards,.rai-grid,.footer-grid,.seg-selector{grid-template-columns:1fr 1fr;}
+  .persona-wrap{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">CC</div>
+    <div class="brand-text">
+      <h1>Customer Segmentation &amp; Targeted CRM</h1>
+      <span>Credit Card Behavioral Analytics — MBA Project Dashboard</span>
+    </div>
+  </div>
+  <div class="navtabs" id="navtabs">
+    <button data-tab="overview" class="active">Executive Overview</button>
+    <button data-tab="explorer">Segment Explorer</button>
+    <button data-tab="behavior">Behavioral Analysis</button>
+    <button data-tab="value">Value &amp; Risk</button>
+    <button data-tab="crm">CRM Strategy</button>
+    <button data-tab="method">Methodology</button>
+  </div>
+  <div class="topbar-right">
+    <button class="pmode-btn" id="pmodeBtn">Presentation Mode</button>
+  </div>
+</div>
+
+<div class="page" id="page">
+  <!-- TABS INJECTED BELOW BY BUILD SCRIPT -->
+  <section class="section active" id="tab-overview">
+  <div class="section-head">
+    <h2>Executive Overview</h2>
+    <p>Portfolio-level summary of the AI-driven behavioral segmentation across 8,950 credit card customers.</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Customers</div>
+      <div class="kpi-value">8,950</div>
+      <div class="kpi-sub">CC_GENERAL.csv, 18 behavioral variables</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Segments Identified</div>
+      <div class="kpi-value">4</div>
+      <div class="kpi-sub">K-means clustering, k=4</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Largest Segment</div>
+      <div class="kpi-value">45.7%</div>
+      <div class="kpi-sub">Low-Balance Casual Spenders</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Priority Insight</div>
+      <div class="kpi-value" style="color:var(--c3); font-size:20px;">45.5% vs 21.8%</div>
+      <div class="kpi-sub">Moderate Utilizers: balance share vs. payment share</div>
+    </div>
+  </div>
+
+  <div class="finding-card">
+    <h3>Critical Business Finding</h3>
+    <div class="finding-stats">
+      <div class="finding-stat">
+        <div class="num" id="ov-bal-pct">45.5%</div>
+        <div class="lbl">Share of total balance</div>
+      </div>
+      <div class="finding-vs">vs</div>
+      <div class="finding-stat">
+        <div class="num" style="color:var(--c2)">21.8%</div>
+        <div class="lbl">Share of total payments</div>
+      </div>
+      <div style="flex:1; min-width:220px;">
+        <span class="finding-text"><span class="tag">MODERATE UTILIZERS</span>Hold a disproportionate share of outstanding balance relative to the payments they contribute — the widest gap of any segment.</span>
+      </div>
+    </div>
+    <p class="finding-text">This imbalance represents a <b>potential repayment/engagement signal</b> that warrants further investigation and targeted CRM intervention. It is <b>not</b> a default prediction or a statement of credit risk — this is a behavioral segmentation study, not a default-prediction model. See <b>Value &amp; Risk</b> for the supporting evidence and <b>CRM Strategy</b> for the recommended response.</p>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px;">
+    <div class="card">
+      <h3>Segment Distribution</h3>
+      <div class="cardsub">Share of 8,950 customers by behavioral segment</div>
+      <div id="chart-seg-donut" class="chart-box" style="height:320px;"></div>
+    </div>
+    <div class="card">
+      <h3>Segment Sizes</h3>
+      <div class="cardsub">Customer count by segment</div>
+      <div id="chart-seg-bar" class="chart-box" style="height:320px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Executive Takeaways</h3>
+    <div class="cardsub">Findings derived directly from the completed clustering and segment profile analysis</div>
+    <div class="takeaway-list">
+      <div class="takeaway">
+        <div class="step">Finding <span>&rarr; Meaning &rarr; Implication</span></div>
+        <p><b>Low-Balance Casual Spenders (45.7%)</b> run the lowest limit usage ratio (0.09) in the portfolio yet contribute the highest share of payments (28.3%). This is a well-behaved, under-utilized base with substantial unused credit headroom — an activation opportunity, not a low-priority segment.</p>
+      </div>
+      <div class="takeaway">
+        <div class="step">Finding <span>&rarr; Meaning &rarr; Implication</span></div>
+        <p><b>High-Risk Revolvers (10.7%)</b> hold the highest mean cash advance (5,009 MU) and the highest cash-advance frequency (0.42) in the portfolio. Reliance on cash advance as a liquidity channel is costly to the customer and signals an opportunity for structured credit substitution.</p>
+      </div>
+      <div class="takeaway">
+        <div class="step">Finding <span>&rarr; Meaning &rarr; Implication</span></div>
+        <p><b>Moderate Utilizers (35.9%)</b> combine the highest limit usage ratio (0.72) with the lowest full-payment rate (0.9%) and hold 45.5% of aggregate balance against 21.8% of payments — the portfolio's clearest engagement/monitoring signal.</p>
+      </div>
+      <div class="takeaway">
+        <div class="step">Finding <span>&rarr; Meaning &rarr; Implication</span></div>
+        <p><b>Premium Transactors (7.7%)</b> generate 42.8% of aggregate purchase volume from just 688 customers, with the strongest repayment discipline (payment-to-minimum ratio 13.7). Smallest segment, highest attrition cost — a retention and cross-sell priority.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <section class="section" id="tab-explorer">
+  <div class="section-head">
+    <h2>Segment Explorer</h2>
+    <p>Select a segment to view its full behavioral profile, evidence-based persona, and value contribution.</p>
+  </div>
+
+  <div class="seg-selector" id="seg-selector"><!-- injected by JS --></div>
+
+  <div class="persona-wrap">
+    <div>
+      <div class="persona-head" id="persona-head">
+        <h2 id="p-name">—</h2>
+        <div class="cnt" id="p-who">Who they are</div>
+        <div class="pct" id="p-pct">—</div>
+        <div class="cnt" id="p-count">— customers</div>
+        <div class="persona-section">
+          <h4>Why they matter</h4>
+          <p id="p-why">—</p>
+        </div>
+        <div class="persona-section">
+          <h4>Recommended focus</h4>
+          <p id="p-focus">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:14px;">
+        <h3>Behavioral Profile</h3>
+        <div class="cardsub">Actual segment means from the clustered dataset</div>
+        <div class="metric-grid" id="p-metrics"><!-- injected --></div>
+      </div>
+      <div class="card">
+        <h3>Value Contribution</h3>
+        <div class="cardsub">Share of portfolio aggregates contributed by this segment</div>
+        <div id="chart-explorer-value" class="chart-box" style="height:220px;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <section class="section" id="tab-behavior">
+  <div class="section-head">
+    <h2>Behavioral Analysis</h2>
+    <p>Detailed behavioral comparison across segments — recreated interactively from the underlying segment-level data.</p>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px;">
+    <div class="card">
+      <h3>Behavioral Profile Radar</h3>
+      <div class="cardsub">Seven variables normalized 0–1 across segments for comparability</div>
+      <div id="chart-radar" class="chart-box" style="height:420px;"></div>
+      <div class="insight-box"><b>What this means:</b> Segments differ in <i>shape</i>, not just degree — Premium Transactors extend toward purchases and full payment; High-Risk Revolvers extend toward balance and cash advance; Moderate Utilizers spike almost exclusively on limit usage.</div>
+    </div>
+    <div class="card">
+      <h3>Cluster Structure (PCA Projection)</h3>
+      <div class="cardsub">Two principal components explain 25.9% + 21.4% = 47.3% of total variance</div>
+      <div id="chart-pca" class="chart-box" style="height:420px;"></div>
+      <div class="chart-note" id="pca-note">Visualization sample; clustering results are based on the full dataset.</div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px;">
+    <div class="card">
+      <h3>Balance Distribution by Segment</h3>
+      <div class="cardsub">Quartile distribution (box plot), values capped at 99th percentile per cleaning methodology</div>
+      <div id="chart-box-balance" class="chart-box" style="height:340px;"></div>
+    </div>
+    <div class="card">
+      <h3>Purchase Distribution by Segment</h3>
+      <div class="cardsub">Quartile distribution (box plot), values capped at 99th percentile per cleaning methodology</div>
+      <div id="chart-box-purchase" class="chart-box" style="height:340px;"></div>
+    </div>
+  </div>
+  <div class="insight-box" style="margin-bottom:16px;">
+    <b>What this means:</b> Balance distributions separate cleanly across segments, but purchase distributions overlap for three of the four segments — only Premium Transactors is clearly separated on purchase volume. Segment averages support campaign design; individual targeting should apply behavioral thresholds within a segment.
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>Cash Advance Behavior</h3>
+      <div class="cardsub">Mean cash advance &amp; frequency by segment</div>
+      <div id="chart-cash" class="chart-box" style="height:280px;"></div>
+    </div>
+    <div class="card">
+      <h3>Payment Behavior</h3>
+      <div class="cardsub">Payment-to-minimum ratio &amp; full payment rate</div>
+      <div id="chart-payment" class="chart-box" style="height:280px;"></div>
+    </div>
+    <div class="card">
+      <h3>Utilization Behavior</h3>
+      <div class="cardsub">Limit usage ratio by segment</div>
+      <div id="chart-utilization" class="chart-box" style="height:280px;"></div>
+    </div>
+  </div>
+</section>
+
+  <section class="section" id="tab-value">
+  <div class="section-head">
+    <h2>Value &amp; Risk</h2>
+    <p>Customer Value vs. Risk-Sensitive Behavior — a management prioritization framework, not a credit-default prediction model.</p>
+  </div>
+
+  <div class="disclaimer-strip">
+    <span>&#9432;</span>
+    <span><b>Important:</b> This framework reflects behavioral segmentation signals only and is not a credit-default prediction model. Positioning is based solely on the completed clustering analysis (limit usage, payment-to-minimum ratio, balance/payment share). It does not estimate probability of default.</span>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px;">
+    <div class="card">
+      <h3>Customer Value vs. Risk-Sensitive Behavior</h3>
+      <div class="cardsub">Bubble size = share of portfolio balance. X: mean limit usage ratio. Y: share of total payments contributed.</div>
+      <div id="chart-matrix" class="chart-box" style="height:420px;"></div>
+    </div>
+    <div class="card">
+      <h3>Moderate Utilizers — Central Finding</h3>
+      <div class="cardsub">Balance share vs. payment share, all segments</div>
+      <div id="chart-value-compare" class="chart-box" style="height:340px;"></div>
+      <div class="insight-box">
+        <b>45.5% of total balance</b> vs <b>21.8% of total payments</b> — Moderate Utilizers show the largest gap of any segment. Combined with the highest limit usage ratio (0.72) and lowest full-payment rate (0.9%), this is a potential repayment/engagement signal warranting targeted monitoring — not a statement of default probability.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Risk-Sensitive Indicators by Segment</h3>
+    <div class="cardsub">All values from the completed segment profile analysis</div>
+    <table class="dtable" id="risk-table"><!-- injected --></table>
+  </div>
+</section>
+
+  <section class="section" id="tab-crm">
+  <div class="section-head">
+    <h2>CRM Strategy</h2>
+    <p>Segment-specific, evidence-based CRM interventions — each traceable to an observed behavior in the data.</p>
+  </div>
+
+  <div class="crm-cards" id="crm-cards"><!-- injected by JS --></div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3>CRM Prioritization Matrix</h3>
+    <div class="cardsub">Managerial assessment (qualitative) — not statistically estimated impact/effort scores</div>
+    <div class="pm-wrap">
+      <div class="pm-axis-y">Business Impact &rarr;</div>
+      <div class="pm-grid" id="pm-grid">
+        <div class="pm-cell" id="pm-hilo"><div class="pm-cell-label">High Impact / Lower Effort</div></div>
+        <div class="pm-cell" id="pm-hihi"><div class="pm-cell-label">High Impact / Higher Effort</div></div>
+        <div class="pm-cell" id="pm-lolo"><div class="pm-cell-label">Low Impact / Lower Effort</div></div>
+        <div class="pm-cell" id="pm-lohi"><div class="pm-cell-label">Low Impact / Higher Effort</div></div>
+      </div>
+      <div class="pm-axis-x">Implementation Effort &rarr;</div>
+    </div>
+    <div class="chart-note" style="margin-top:10px;">Placement reflects a qualitative managerial assessment (Low/Medium/High impact and effort, per Section 6.6 of the report) — not a statistically estimated score.</div>
+  </div>
+</section>
+
+  <section class="section" id="tab-method">
+  <div class="section-head">
+    <h2>Methodology</h2>
+    <p>Full analytical pipeline from raw data to CRM strategy — every step disclosed, nothing invented.</p>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px; align-items:start;">
+    <div class="card">
+      <h3>Analytical Pipeline</h3>
+      <div class="cardsub">Sequential stages, each producing the input for the next</div>
+      <div class="flow-wrap">
+        <div class="flow-step"><div class="ft">18 Original Variables</div><div class="fs">CC_GENERAL.csv — 8,950 customers</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">Data Cleaning</div><div class="fs">1 CREDIT_LIMIT + 313 MINIMUM_PAYMENTS imputed (median); 99th-percentile capping across 8 skewed fields</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">7 Behavioral KPIs Engineered</div><div class="fs">Limit usage ratio, avg purchase/txn, avg cash advance/txn, payment-to-minimum ratio, one-off purchase share, monthly avg purchases, monthly avg cash advance</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">Feature Preparation</div><div class="fs">17 features standardized (StandardScaler)</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">K-Means Clustering</div><div class="fs">Fitted for k = 2 to 8</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">Model Evaluation</div><div class="fs">Elbow (inertia) + silhouette score compared across candidate k</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step" style="border-color:var(--c3); background:var(--c3-bg);"><div class="ft">4 Customer Segments (k = 4 selected)</div><div class="fs">Chosen for managerial interpretability — see note below</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">Personas</div><div class="fs">Evidence-based profiles from segment means</div></div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-step"><div class="ft">CRM Strategies</div><div class="fs">Segment-specific, traceable interventions</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <h3>Model Selection: Elbow &amp; Silhouette</h3>
+        <div class="cardsub">k evaluated from 2 to 8</div>
+        <div id="chart-method-elbow" class="chart-box" style="height:260px;"></div>
+        <div class="insight-box">
+          <b>Silhouette performance was strongest at k=2–3 (0.39 and 0.31), but k=4 was selected</b> to provide greater segment differentiation and managerial usability. k=4 does <b>not</b> have the highest silhouette score (0.153) — this is a deliberate statistical-vs-managerial trade-off, disclosed rather than hidden.
+        </div>
+      </div>
+      <div class="card">
+        <h3>PCA Cluster Visualization</h3>
+        <div class="cardsub">Same projection as Behavioral Analysis tab</div>
+        <div id="chart-method-pca" class="chart-box" style="height:280px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3>Feature Engineering Detail</h3>
+    <div class="cardsub">Seven KPIs derived from the 18 original variables</div>
+    <table class="dtable">
+      <tr><th>KPI</th><th>Formula</th><th>What it captures</th></tr>
+      <tr><td>Limit Usage Ratio</td><td>BALANCE / CREDIT_LIMIT</td><td>Proportion of available credit currently drawn</td></tr>
+      <tr><td>Avg. Purchase per Transaction</td><td>PURCHASES / PURCHASES_TRX</td><td>Typical ticket size of a purchase</td></tr>
+      <tr><td>Avg. Cash Advance per Transaction</td><td>CASH_ADVANCE / CASH_ADVANCE_TRX</td><td>Typical size of a cash withdrawal</td></tr>
+      <tr><td>Payment-to-Minimum Ratio</td><td>PAYMENTS / MINIMUM_PAYMENTS</td><td>Repayment above the contractual minimum</td></tr>
+      <tr><td>One-Off Purchase Share</td><td>ONEOFF_PURCHASES / PURCHASES</td><td>Share of spend that is one-off vs. instalment</td></tr>
+      <tr><td>Monthly Average Purchases</td><td>PURCHASES / TENURE</td><td>Tenure-normalized purchase intensity</td></tr>
+      <tr><td>Monthly Average Cash Advance</td><td>CASH_ADVANCE / TENURE</td><td>Tenure-normalized cash advance intensity</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3>Responsible AI</h3>
+    <div class="cardsub">Governance considerations for this segmentation model</div>
+    <div class="rai-grid">
+      <div class="rai-item">
+        <h4>Privacy</h4>
+        <p>Dataset is public and anonymized — no names, account numbers, or contact details. No PII is processed in this analysis.</p>
+      </div>
+      <div class="rai-item">
+        <h4>Bias</h4>
+        <p>No demographic variables are present, limiting direct discrimination — but behavioral proxies (e.g., credit limit) can still correlate with protected characteristics indirectly.</p>
+      </div>
+      <div class="rai-item">
+        <h4>Transparency</h4>
+        <p>K-means centroids are directly interpretable as behavioral profiles, supporting clear internal explanation of why a customer falls into a given segment.</p>
+      </div>
+      <div class="rai-item">
+        <h4>Human Oversight</h4>
+        <p>Segment membership must not, on its own, determine credit approval, limit changes, pricing, or adverse action. It supports CRM engagement decisions only.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Data &amp; Source Disclosure</h3>
+    <table class="dtable">
+      <tr><th>Property</th><th>Value</th></tr>
+      <tr><td>Source</td><td>CC_GENERAL.csv — public Kaggle-sourced dataset</td></tr>
+      <tr><td>Records</td><td>8,950 customers</td></tr>
+      <tr><td>Original variables</td><td>18 behavioral variables</td></tr>
+      <tr><td>Engineered variables</td><td>7 additional KPIs</td></tr>
+      <tr><td>Missing values treated</td><td>1 CREDIT_LIMIT, 313 MINIMUM_PAYMENTS (median imputation)</td></tr>
+      <tr><td>Outlier treatment</td><td>99th-percentile capping across 8 skewed monetary fields</td></tr>
+      <tr><td>Demographic variables</td><td>None present in source data</td></tr>
+      <tr><td>Outcome / default variable</td><td>None present — this is a segmentation study, not a prediction model</td></tr>
+    </table>
+  </div>
+</section>
+
+
+  <div class="footer">
+    <div class="footer-grid">
+      <div><b>Project</b>AI-Driven Customer Segmentation and Targeted CRM</div>
+      <div><b>Dataset</b>CC_GENERAL.csv</div>
+      <div><b>Customers</b>8,950</div>
+      <div><b>Segments</b>4 (K-means)</div>
+      <div><b>Data source</b>Public Kaggle-sourced dataset</div>
+    </div>
+    <div class="footer-note">
+      This dashboard presents behavioral customer segmentation for CRM decision support. It should not be interpreted as a credit-default prediction model or used as the sole basis for adverse financial decisions (credit limit, pricing, or approval). Dataset is public and anonymised — not proprietary bank data. Dashboard developed for academic/project purposes.
+    </div>
+  </div>
+</div>
+
+<script id="dashboard-data" type="application/json">
+{"sizes": {"Low-Balance Casual Spenders": 4090, "High-Risk Revolvers": 956, "Moderate Utilizers": 3216, "Premium Transactors": 688}, "total_customers": 8950, "value_contribution": {"Low-Balance Casual Spenders": {"TotBal": 9.25, "TotPay": 28.34, "TotPur": 35.7, "TotCA": 7.71}, "High-Risk Revolvers": {"TotBal": 32.38, "TotPay": 25.41, "TotPur": 6.15, "TotCA": 57.17}, "Moderate Utilizers": {"TotBal": 45.47, "TotPay": 21.77, "TotPur": 15.31, "TotCA": 31.05}, "Premium Transactors": {"TotBal": 12.9, "TotPay": 24.48, "TotPur": 42.84, "TotCA": 4.07}}, "profiles": {"Low-Balance Casual Spenders": {"BALANCE": 311.909, "PURCHASES": 731.326, "ONEOFF_PURCHASES": 368.503, "INSTALLMENTS_PURCHASES": 363.159, "CASH_ADVANCE": 157.89, "CREDIT_LIMIT": 4088.486, "PAYMENTS": 1022.943, "MINIMUM_PAYMENTS": 209.264, "PRC_FULL_PAYMENT": 0.268, "TENURE": 11.48, "PURCHASES_TRX": 12.725, "CASH_ADVANCE_TRX": 0.773, "LIMIT_USAGE_RATIO": 0.088, "AVG_PURCHASE_TRX": 84.327, "AVG_CASH_ADVANCE_TRX": 59.597, "PAYMENT_TO_MIN_RATIO": 6.682, "ONEOFF_PURCHASE_SHARE": 0.394, "MONTHLY_AVG_PURCHASES": 63.706, "MONTHLY_AVG_CASH_ADVANCE": 14.341, "PURCHASES_FREQUENCY": 0.582, "CASH_ADVANCE_FREQUENCY": 0.038, "BALANCE_FREQUENCY": 0.775}, "High-Risk Revolvers": {"BALANCE": 4671.529, "PURCHASES": 539.198, "ONEOFF_PURCHASES": 309.084, "INSTALLMENTS_PURCHASES": 230.184, "CASH_ADVANCE": 5009.22, "CREDIT_LIMIT": 8270.559, "PAYMENTS": 3923.865, "MINIMUM_PAYMENTS": 1689.915, "PRC_FULL_PAYMENT": 0.043, "TENURE": 11.313, "PURCHASES_TRX": 8.212, "CASH_ADVANCE_TRX": 12.347, "LIMIT_USAGE_RATIO": 0.59, "AVG_PURCHASE_TRX": 56.414, "AVG_CASH_ADVANCE_TRX": 860.719, "PAYMENT_TO_MIN_RATIO": 4.434, "ONEOFF_PURCHASE_SHARE": 0.311, "MONTHLY_AVG_PURCHASES": 48.079, "MONTHLY_AVG_CASH_ADVANCE": 457.902, "PURCHASES_FREQUENCY": 0.298, "CASH_ADVANCE_FREQUENCY": 0.415, "BALANCE_FREQUENCY": 0.934}, "Moderate Utilizers": {"BALANCE": 1950.123, "PURCHASES": 398.989, "ONEOFF_PURCHASES": 213.846, "INSTALLMENTS_PURCHASES": 185.33, "CASH_ADVANCE": 808.798, "CREDIT_LIMIT": 2992.309, "PAYMENTS": 999.22, "MINIMUM_PAYMENTS": 1054.994, "PRC_FULL_PAYMENT": 0.009, "TENURE": 11.552, "PURCHASES_TRX": 8.558, "CASH_ADVANCE_TRX": 3.998, "LIMIT_USAGE_RATIO": 0.724, "AVG_PURCHASE_TRX": 42.143, "AVG_CASH_ADVANCE_TRX": 216.882, "PAYMENT_TO_MIN_RATIO": 1.613, "ONEOFF_PURCHASE_SHARE": 0.324, "MONTHLY_AVG_PURCHASES": 34.494, "MONTHLY_AVG_CASH_ADVANCE": 73.681, "PURCHASES_FREQUENCY": 0.344, "CASH_ADVANCE_FREQUENCY": 0.19, "BALANCE_FREQUENCY": 0.972}, "Premium Transactors": {"BALANCE": 2585.868, "PURCHASES": 5217.302, "ONEOFF_PURCHASES": 3359.349, "INSTALLMENTS_PURCHASES": 1656.777, "CASH_ADVANCE": 495.373, "CREDIT_LIMIT": 8410.247, "PAYMENTS": 5252.568, "MINIMUM_PAYMENTS": 1198.022, "PRC_FULL_PAYMENT": 0.303, "TENURE": 11.862, "PURCHASES_TRX": 64.298, "CASH_ADVANCE_TRX": 1.824, "LIMIT_USAGE_RATIO": 0.316, "AVG_PURCHASE_TRX": 167.143, "AVG_CASH_ADVANCE_TRX": 113.061, "PAYMENT_TO_MIN_RATIO": 13.697, "ONEOFF_PURCHASE_SHARE": 0.644, "MONTHLY_AVG_PURCHASES": 441.177, "MONTHLY_AVG_CASH_ADVANCE": 43.034, "PURCHASES_FREQUENCY": 0.901, "CASH_ADVANCE_FREQUENCY": 0.067, "BALANCE_FREQUENCY": 0.966}}, "boxplot": {"Low-Balance Casual Spenders": {"BALANCE": {"min": 0.0, "q1": 28.903743, "median": 105.125907, "q3": 358.68960174999995, "max": 3478.070041}, "PURCHASES": {"min": 0.0, "q1": 163.2575, "median": 463.155, "q3": 1096.5175, "max": 3384.68}}, "High-Risk Revolvers": {"BALANCE": {"min": 8.640998, "q1": 2578.4397865, "median": 4495.715246, "q3": 6673.930760249999, "max": 9338.804814}, "PURCHASES": {"min": 0.0, "q1": 0.0, "median": 71.53, "q3": 776.5999999999999, "max": 5197.22}}, "Moderate Utilizers": {"BALANCE": {"min": 45.22614, "q1": 1042.0656465, "median": 1511.0496685, "q3": 2544.687248, "max": 9061.317491}, "PURCHASES": {"min": 0.0, "q1": 0.0, "median": 125.38499999999999, "q3": 556.9200000000001, "max": 3342.9}}, "Premium Transactors": {"BALANCE": {"min": 0.0, "q1": 535.6483282500001, "median": 1558.864075, "q3": 3769.17607575, "max": 9338.804814}, "PURCHASES": {"min": 1200.0, "q1": 3627.74, "median": 4557.504999999999, "q3": 6496.9575, "max": 8977.290000000014}}}, "k_eval": [{"k": 2, "inertia": 126862, "silhouette": 0.3917}, {"k": 3, "inertia": 107448, "silhouette": 0.3131}, {"k": 4, "inertia": 96945, "silhouette": 0.1529}, {"k": 5, "inertia": 90541, "silhouette": 0.1553}, {"k": 6, "inertia": 85042, "silhouette": 0.1706}, {"k": 7, "inertia": 80204, "silhouette": 0.1725}, {"k": 8, "inertia": 75843, "silhouette": 0.1768}], "pca_sample": [{"x": -1.057, "y": -1.744, "seg": "Low-Balance Casual Spenders"}, {"x": -1.041, "y": -1.538, "seg": "Low-Balance Casual Spenders"}, {"x": -1.55, "y": -1.638, "seg": "Low-Balance Casual Spenders"}, {"x": 0.08, "y": -1.518, "seg": "Low-Balance Casual Spenders"}, {"x": -0.177, "y": -1.321, "seg": "Low-Balance Casual Spenders"}, {"x": -1.626, "y": -1.06, "seg": "Low-Balance Casual Spenders"}, {"x": -1.428, "y": -1.225, "seg": "Low-Balance Casual Spenders"}, {"x": 0.783, "y": -1.471, "seg": "Low-Balance Casual Spenders"}, {"x": 0.157, "y": -1.326, "seg": "Low-Balance Casual Spenders"}, {"x": -0.887, "y": -0.753, "seg": "Low-Balance Casual Spenders"}, {"x": 0.175, "y": -1.916, "seg": "Low-Balance Casual Spenders"}, {"x": 1.439, "y": -2.235, "seg": "Low-Balance Casual Spenders"}, {"x": 1.238, "y": 0.446, "seg": "Low-Balance Casual Spenders"}, {"x": 0.792, "y": -2.101, "seg": "Low-Balance Casual Spenders"}, {"x": 2.135, "y": -2.378, "seg": "Low-Balance Casual Spenders"}, {"x": -0.707, "y": -1.71, "seg": "Low-Balance Casual Spenders"}, {"x": -0.216, "y": -1.378, "seg": "Low-Balance Casual Spenders"}, {"x": 0.708, "y": -1.469, "seg": "Low-Balance Casual Spenders"}, {"x": -0.829, "y": -1.463, "seg": "Low-Balance Casual Spenders"}, {"x": -1.945, "y": -1.029, "seg": "Low-Balance Casual Spenders"}, {"x": 0.396, "y": -1.452, "seg": "Low-Balance Casual Spenders"}, {"x": -1.225, "y": -1.287, "seg": "Low-Balance Casual Spenders"}, {"x": -0.431, "y": -1.567, "seg": "Low-Balance Casual Spenders"}, {"x": -0.273, "y": -0.599, "seg": "Low-Balance Casual Spenders"}, {"x": -1.22, "y": -0.944, "seg": "Low-Balance Casual Spenders"}, {"x": -1.51, "y": -1.236, "seg": "Low-Balance Casual Spenders"}, {"x": 0.519, "y": -1.04, "seg": "Low-Balance Casual Spenders"}, {"x": -1.306, "y": -1.337, "seg": "Low-Balance Casual Spenders"}, {"x": -1.234, "y": -1.118, "seg": "Low-Balance Casual Spenders"}, {"x": -1.419, "y": -1.108, "seg": "Low-Balance Casual Spenders"}, {"x": 1.497, "y": -0.737, "seg": "Low-Balance Casual Spenders"}, {"x": 0.304, "y": -1.973, "seg": "Low-Balance Casual Spenders"}, {"x": -1.785, "y": -1.095, "seg": "Low-Balance Casual Spenders"}, {"x": -0.866, "y": -1.446, "seg": "Low-Balance Casual Spenders"}, {"x": -1.58, "y": -0.94, "seg": "Low-Balance Casual Spenders"}, {"x": -1.59, "y": -0.748, "seg": "Low-Balance Casual Spenders"}, {"x": -0.287, "y": -1.357, "seg": "Low-Balance Casual Spenders"}, {"x": -0.839, "y": -1.589, "seg": "Low-Balance Casual Spenders"}, {"x": -0.923, "y": -1.415, "seg": "Low-Balance Casual Spenders"}, {"x": -1.078, "y": -0.892, "seg": "Low-Balance Casual Spenders"}, {"x": -1.355, "y": -1.099, "seg": "Low-Balance Casual Spenders"}, {"x": 0.175, "y": -2.284, "seg": "Low-Balance Casual Spenders"}, {"x": -0.501, "y": -0.669, "seg": "Low-Balance Casual Spenders"}, {"x": -1.777, "y": -1.148, "seg": "Low-Balance Casual Spenders"}, {"x": -1.553, "y": -1.089, "seg": "Low-Balance Casual Spenders"}, {"x": -1.842, "y": -1.175, "seg": "Low-Balance Casual Spenders"}, {"x": 0.751, "y": -0.831, "seg": "Low-Balance Casual Spenders"}, {"x": -1.264, "y": -1.243, "seg": "Low-Balance Casual Spenders"}, {"x": -0.527, "y": -1.244, "seg": "Low-Balance Casual Spenders"}, {"x": -0.095, "y": -1.888, "seg": "Low-Balance Casual Spenders"}, {"x": -1.907, "y": -0.959, "seg": "Low-Balance Casual Spenders"}, {"x": -1.36, "y": -1.29, "seg": "Low-Balance Casual Spenders"}, {"x": 2.869, "y": -2.307, "seg": "Low-Balance Casual Spenders"}, {"x": 2.466, "y": 0.664, "seg": "Low-Balance Casual Spenders"}, {"x": -0.715, "y": -0.225, "seg": "Low-Balance Casual Spenders"}, {"x": -1.381, "y": -1.561, "seg": "Low-Balance Casual Spenders"}, {"x": -1.251, "y": -1.325, "seg": "Low-Balance Casual Spenders"}, {"x": -1.533, "y": -1.106, "seg": "Low-Balance Casual Spenders"}, {"x": 0.483, "y": -2.085, "seg": "Low-Balance Casual Spenders"}, {"x": -1.541, "y": -1.022, "seg": "Low-Balance Casual Spenders"}, {"x": 1.506, "y": -0.696, "seg": "Low-Balance Casual Spenders"}, {"x": 0.104, "y": -1.862, "seg": "Low-Balance Casual Spenders"}, {"x": -0.743, "y": -1.667, "seg": "Low-Balance Casual Spenders"}, {"x": -1.558, "y": -1.004, "seg": "Low-Balance Casual Spenders"}, {"x": -1.265, "y": -0.506, "seg": "Low-Balance Casual Spenders"}, {"x": -0.195, "y": -1.554, "seg": "Low-Balance Casual Spenders"}, {"x": -1.79, "y": -1.876, "seg": "Low-Balance Casual Spenders"}, {"x": 0.199, "y": -1.225, "seg": "Low-Balance Casual Spenders"}, {"x": -0.721, "y": -1.206, "seg": "Low-Balance Casual Spenders"}, {"x": -1.227, "y": -1.047, "seg": "Low-Balance Casual Spenders"}, {"x": -0.029, "y": -1.308, "seg": "Low-Balance Casual Spenders"}, {"x": -1.723, "y": -0.982, "seg": "Low-Balance Casual Spenders"}, {"x": 0.331, "y": -1.907, "seg": "Low-Balance Casual Spenders"}, {"x": -1.307, "y": -1.353, "seg": "Low-Balance Casual Spenders"}, {"x": -1.188, "y": -1.251, "seg": "Low-Balance Casual Spenders"}, {"x": -1.426, "y": -1.677, "seg": "Low-Balance Casual Spenders"}, {"x": 0.312, "y": -2.276, "seg": "Low-Balance Casual Spenders"}, {"x": -0.876, "y": 0.506, "seg": "Low-Balance Casual Spenders"}, {"x": -1.487, "y": -2.043, "seg": "Low-Balance Casual Spenders"}, {"x": 0.181, "y": -2.247, "seg": "Low-Balance Casual Spenders"}, {"x": -1.694, "y": -1.166, "seg": "Low-Balance Casual Spenders"}, {"x": -0.438, "y": -1.484, "seg": "Low-Balance Casual Spenders"}, {"x": -1.588, "y": -1.186, "seg": "Low-Balance Casual Spenders"}, {"x": -1.4, "y": -1.143, "seg": "Low-Balance Casual Spenders"}, {"x": 0.922, "y": -1.454, "seg": "Low-Balance Casual Spenders"}, {"x": -1.35, "y": -0.351, "seg": "Low-Balance Casual Spenders"}, {"x": 2.553, "y": -2.56, "seg": "Low-Balance Casual Spenders"}, {"x": -0.716, "y": -0.482, "seg": "Low-Balance Casual Spenders"}, {"x": 1.097, "y": -1.25, "seg": "Low-Balance Casual Spenders"}, {"x": -0.036, "y": -1.162, "seg": "Low-Balance Casual Spenders"}, {"x": 0.842, "y": -2.274, "seg": "Low-Balance Casual Spenders"}, {"x": -0.451, "y": -0.731, "seg": "Low-Balance Casual Spenders"}, {"x": 0.807, "y": -0.651, "seg": "Low-Balance Casual Spenders"}, {"x": 0.514, "y": -2.04, "seg": "Low-Balance Casual Spenders"}, {"x": -0.41, "y": -0.443, "seg": "Low-Balance Casual Spenders"}, {"x": -1.142, "y": -1.087, "seg": "Low-Balance Casual Spenders"}, {"x": -0.808, "y": -1.241, "seg": "Low-Balance Casual Spenders"}, {"x": -0.263, "y": -0.996, "seg": "Low-Balance Casual Spenders"}, {"x": 0.345, "y": -1.26, "seg": "Low-Balance Casual Spenders"}, {"x": -0.905, "y": -1.684, "seg": "Low-Balance Casual Spenders"}, {"x": -1.592, "y": -1.113, "seg": "Low-Balance Casual Spenders"}, {"x": -1.081, "y": -1.65, "seg": "Low-Balance Casual Spenders"}, {"x": -0.146, "y": -1.422, "seg": "Low-Balance Casual Spenders"}, {"x": 0.13, "y": -0.832, "seg": "Low-Balance Casual Spenders"}, {"x": -1.143, "y": -1.3, "seg": "Low-Balance Casual Spenders"}, {"x": 2.755, "y": -1.604, "seg": "Low-Balance Casual Spenders"}, {"x": 1.959, "y": -1.519, "seg": "Low-Balance Casual Spenders"}, {"x": 1.594, "y": -1.363, "seg": "Low-Balance Casual Spenders"}, {"x": -0.509, "y": -0.57, "seg": "Low-Balance Casual Spenders"}, {"x": -1.692, "y": -1.287, "seg": "Low-Balance Casual Spenders"}, {"x": -0.365, "y": -0.508, "seg": "Low-Balance Casual Spenders"}, {"x": -1.32, "y": -1.218, "seg": "Low-Balance Casual Spenders"}, {"x": 0.239, "y": -2.048, "seg": "Low-Balance Casual Spenders"}, {"x": 0.624, "y": -0.392, "seg": "Low-Balance Casual Spenders"}, {"x": -0.236, "y": -1.259, "seg": "Low-Balance Casual Spenders"}, {"x": -1.065, "y": -0.839, "seg": "Low-Balance Casual Spenders"}, {"x": -1.591, "y": -1.149, "seg": "Low-Balance Casual Spenders"}, {"x": -2.205, "y": -1.103, "seg": "Low-Balance Casual Spenders"}, {"x": -0.614, "y": -1.879, "seg": "Low-Balance Casual Spenders"}, {"x": -0.709, "y": -1.579, "seg": "Low-Balance Casual Spenders"}, {"x": 2.428, "y": -0.598, "seg": "Low-Balance Casual Spenders"}, {"x": 2.43, "y": -1.979, "seg": "Low-Balance Casual Spenders"}, {"x": 1.089, "y": -2.013, "seg": "Low-Balance Casual Spenders"}, {"x": -1.379, "y": -1.281, "seg": "Low-Balance Casual Spenders"}, {"x": 0.431, "y": -1.502, "seg": "Low-Balance Casual Spenders"}, {"x": -0.285, "y": -1.227, "seg": "Low-Balance Casual Spenders"}, {"x": 0.514, "y": 0.19, "seg": "Low-Balance Casual Spenders"}, {"x": 0.099, "y": 0.003, "seg": "Low-Balance Casual Spenders"}, {"x": -1.506, "y": -1.252, "seg": "Low-Balance Casual Spenders"}, {"x": -0.59, "y": -1.436, "seg": "Low-Balance Casual Spenders"}, {"x": -0.647, "y": -2.103, "seg": "Low-Balance Casual Spenders"}, {"x": -1.447, "y": -1.949, "seg": "Low-Balance Casual Spenders"}, {"x": 0.705, "y": -2.014, "seg": "Low-Balance Casual Spenders"}, {"x": 1.257, "y": -1.303, "seg": "Low-Balance Casual Spenders"}, {"x": -0.643, "y": -1.811, "seg": "Low-Balance Casual Spenders"}, {"x": 0.773, "y": -1.266, "seg": "Low-Balance Casual Spenders"}, {"x": -1.262, "y": -1.971, "seg": "Low-Balance Casual Spenders"}, {"x": -1.212, "y": -1.563, "seg": "Low-Balance Casual Spenders"}, {"x": 1.882, "y": -0.962, "seg": "Low-Balance Casual Spenders"}, {"x": 0.024, "y": -1.46, "seg": "Low-Balance Casual Spenders"}, {"x": -0.719, "y": -1.028, "seg": "Low-Balance Casual Spenders"}, {"x": 0.098, "y": -1.971, "seg": "Low-Balance Casual Spenders"}, {"x": -0.492, "y": -1.142, "seg": "Low-Balance Casual Spenders"}, {"x": -0.897, "y": -1.161, "seg": "Low-Balance Casual Spenders"}, {"x": 0.406, "y": -2.32, "seg": "Low-Balance Casual Spenders"}, {"x": -1.557, "y": -0.989, "seg": "Low-Balance Casual Spenders"}, {"x": -1.974, "y": -0.833, "seg": "Low-Balance Casual Spenders"}, {"x": -1.882, "y": -1.103, "seg": "Low-Balance Casual Spenders"}, {"x": 0.107, "y": -1.425, "seg": "Low-Balance Casual Spenders"}, {"x": -0.542, "y": -1.588, "seg": "Low-Balance Casual Spenders"}, {"x": -0.35, "y": -1.901, "seg": "Low-Balance Casual Spenders"}, {"x": 1.564, "y": -1.673, "seg": "Low-Balance Casual Spenders"}, {"x": -1.069, "y": -1.02, "seg": "Low-Balance Casual Spenders"}, {"x": -0.911, "y": -1.901, "seg": "Low-Balance Casual Spenders"}, {"x": -0.064, "y": -1.549, "seg": "Low-Balance Casual Spenders"}, {"x": 0.408, "y": -0.347, "seg": "Low-Balance Casual Spenders"}, {"x": 0.282, "y": -1.917, "seg": "Low-Balance Casual Spenders"}, {"x": -0.606, "y": -1.475, "seg": "Low-Balance Casual Spenders"}, {"x": 1.057, "y": -0.222, "seg": "Low-Balance Casual Spenders"}, {"x": -2.053, "y": -1.074, "seg": "Low-Balance Casual Spenders"}, {"x": -1.463, "y": -1.172, "seg": "Low-Balance Casual Spenders"}, {"x": -1.533, "y": -0.948, "seg": "Low-Balance Casual Spenders"}, {"x": 0.796, "y": -0.271, "seg": "Low-Balance Casual Spenders"}, {"x": -0.63, "y": -1.579, "seg": "Low-Balance Casual Spenders"}, {"x": -0.132, "y": -1.163, "seg": "Low-Balance Casual Spenders"}, {"x": -0.846, "y": -1.206, "seg": "Low-Balance Casual Spenders"}, {"x": -1.426, "y": -1.438, "seg": "Low-Balance Casual Spenders"}, {"x": -1.895, "y": 0.097, "seg": "Low-Balance Casual Spenders"}, {"x": -1.518, "y": -0.424, "seg": "Low-Balance Casual Spenders"}, {"x": -2.078, "y": 0.112, "seg": "Low-Balance Casual Spenders"}, {"x": -0.587, "y": -0.985, "seg": "Low-Balance Casual Spenders"}, {"x": 1.292, "y": -0.186, "seg": "Low-Balance Casual Spenders"}, {"x": -2.059, "y": -1.046, "seg": "Low-Balance Casual Spenders"}, {"x": -0.276, "y": -1.527, "seg": "Low-Balance Casual Spenders"}, {"x": -1.537, "y": -1.203, "seg": "Low-Balance Casual Spenders"}, {"x": 0.604, "y": -0.843, "seg": "Low-Balance Casual Spenders"}, {"x": 0.087, "y": -1.879, "seg": "Low-Balance Casual Spenders"}, {"x": 0.293, "y": -1.129, "seg": "Low-Balance Casual Spenders"}, {"x": 2.041, "y": -1.996, "seg": "Low-Balance Casual Spenders"}, {"x": -1.9, "y": -1.137, "seg": "Low-Balance Casual Spenders"}, {"x": 1.242, "y": -2.503, "seg": "Low-Balance Casual Spenders"}, {"x": -1.296, "y": -1.397, "seg": "Low-Balance Casual Spenders"}, {"x": -1.221, "y": -1.119, "seg": "Low-Balance Casual Spenders"}, {"x": -1.498, "y": -1.428, "seg": "Low-Balance Casual Spenders"}, {"x": -0.682, "y": 0.372, "seg": "Low-Balance Casual Spenders"}, {"x": -1.346, "y": -1.802, "seg": "Low-Balance Casual Spenders"}, {"x": -0.876, "y": -0.879, "seg": "Low-Balance Casual Spenders"}, {"x": 0.272, "y": -0.506, "seg": "Low-Balance Casual Spenders"}, {"x": -0.357, "y": -1.05, "seg": "Low-Balance Casual Spenders"}, {"x": 0.16, "y": -0.422, "seg": "Low-Balance Casual Spenders"}, {"x": -0.757, "y": -1.302, "seg": "Low-Balance Casual Spenders"}, {"x": 0.155, "y": -2.182, "seg": "Low-Balance Casual Spenders"}, {"x": 0.201, "y": -0.957, "seg": "Low-Balance Casual Spenders"}, {"x": -1.723, "y": -1.236, "seg": "Low-Balance Casual Spenders"}, {"x": -1.479, "y": -0.956, "seg": "Low-Balance Casual Spenders"}, {"x": 0.162, "y": -1.689, "seg": "Low-Balance Casual Spenders"}, {"x": -1.447, "y": -1.494, "seg": "Low-Balance Casual Spenders"}, {"x": -1.413, "y": -1.485, "seg": "Low-Balance Casual Spenders"}, {"x": -1.359, "y": -0.602, "seg": "Low-Balance Casual Spenders"}, {"x": -0.85, "y": -2.081, "seg": "Low-Balance Casual Spenders"}, {"x": -1.076, "y": 0.194, "seg": "Low-Balance Casual Spenders"}, {"x": -1.407, "y": -1.323, "seg": "Low-Balance Casual Spenders"}, {"x": -0.919, "y": -1.419, "seg": "Low-Balance Casual Spenders"}, {"x": -1.26, "y": -1.772, "seg": "Low-Balance Casual Spenders"}, {"x": -1.553, "y": -1.162, "seg": "Low-Balance Casual Spenders"}, {"x": -1.387, "y": -1.286, "seg": "Low-Balance Casual Spenders"}, {"x": -1.127, "y": -1.439, "seg": "Low-Balance Casual Spenders"}, {"x": -0.47, "y": -0.487, "seg": "Low-Balance Casual Spenders"}, {"x": -1.237, "y": -1.915, "seg": "Low-Balance Casual Spenders"}, {"x": -0.882, "y": -1.926, "seg": "Low-Balance Casual Spenders"}, {"x": -1.217, "y": -1.877, "seg": "Low-Balance Casual Spenders"}, {"x": -1.188, "y": -1.719, "seg": "Low-Balance Casual Spenders"}, {"x": 0.953, "y": -1.769, "seg": "Low-Balance Casual Spenders"}, {"x": -1.175, "y": -1.054, "seg": "Low-Balance Casual Spenders"}, {"x": -1.492, "y": -1.369, "seg": "Low-Balance Casual Spenders"}, {"x": -0.709, "y": 1.015, "seg": "Low-Balance Casual Spenders"}, {"x": -1.029, "y": -1.598, "seg": "Low-Balance Casual Spenders"}, {"x": 0.867, "y": -0.535, "seg": "Low-Balance Casual Spenders"}, {"x": -0.876, "y": -1.244, "seg": "Low-Balance Casual Spenders"}, {"x": -1.073, "y": -0.958, "seg": "Low-Balance Casual Spenders"}, {"x": 0.354, "y": -1.86, "seg": "Low-Balance Casual Spenders"}, {"x": -1.686, "y": -0.797, "seg": "Low-Balance Casual Spenders"}, {"x": -0.372, "y": -1.183, "seg": "Low-Balance Casual Spenders"}, {"x": -0.961, "y": -1.357, "seg": "Low-Balance Casual Spenders"}, {"x": 0.355, "y": -1.799, "seg": "Low-Balance Casual Spenders"}, {"x": -1.076, "y": -1.817, "seg": "Low-Balance Casual Spenders"}, {"x": -1.142, "y": -1.803, "seg": "Low-Balance Casual Spenders"}, {"x": -1.656, "y": -1.116, "seg": "Low-Balance Casual Spenders"}, {"x": 1.528, "y": 0.559, "seg": "Low-Balance Casual Spenders"}, {"x": -1.614, "y": -1.168, "seg": "Low-Balance Casual Spenders"}, {"x": 2.054, "y": -2.413, "seg": "Low-Balance Casual Spenders"}, {"x": 1.544, "y": -0.529, "seg": "Low-Balance Casual Spenders"}, {"x": -1.215, "y": -1.449, "seg": "Low-Balance Casual Spenders"}, {"x": -0.949, "y": -0.775, "seg": "Low-Balance Casual Spenders"}, {"x": -0.12, "y": -0.814, "seg": "Low-Balance Casual Spenders"}, {"x": 1.241, "y": -1.506, "seg": "Low-Balance Casual Spenders"}, {"x": -0.335, "y": -1.244, "seg": "Low-Balance Casual Spenders"}, {"x": 0.709, "y": -0.59, "seg": "Low-Balance Casual Spenders"}, {"x": -0.639, "y": -1.298, "seg": "Low-Balance Casual Spenders"}, {"x": 0.056, "y": -0.605, "seg": "Low-Balance Casual Spenders"}, {"x": -0.691, "y": -1.033, "seg": "Low-Balance Casual Spenders"}, {"x": -1.342, "y": -0.93, "seg": "Low-Balance Casual Spenders"}, {"x": -1.381, "y": -1.221, "seg": "Low-Balance Casual Spenders"}, {"x": 1.079, "y": -1.38, "seg": "Low-Balance Casual Spenders"}, {"x": 0.187, "y": -0.756, "seg": "Low-Balance Casual Spenders"}, {"x": -0.543, "y": -1.461, "seg": "Low-Balance Casual Spenders"}, {"x": -0.034, "y": -1.343, "seg": "Low-Balance Casual Spenders"}, {"x": 0.529, "y": -1.552, "seg": "Low-Balance Casual Spenders"}, {"x": -1.192, "y": -1.572, "seg": "Low-Balance Casual Spenders"}, {"x": -0.802, "y": -1.52, "seg": "Low-Balance Casual Spenders"}, {"x": -1.621, "y": -1.262, "seg": "Low-Balance Casual Spenders"}, {"x": 0.187, "y": -1.63, "seg": "Low-Balance Casual Spenders"}, {"x": 0.255, "y": -0.332, "seg": "Low-Balance Casual Spenders"}, {"x": -1.612, "y": -1.392, "seg": "Low-Balance Casual Spenders"}, {"x": -1.369, "y": -1.631, "seg": "Low-Balance Casual Spenders"}, {"x": 0.333, "y": -1.451, "seg": "Low-Balance Casual Spenders"}, {"x": 0.095, "y": -1.301, "seg": "Low-Balance Casual Spenders"}, {"x": -0.888, "y": -1.169, "seg": "Low-Balance Casual Spenders"}, {"x": 0.114, "y": -1.82, "seg": "Low-Balance Casual Spenders"}, {"x": 0.275, "y": -1.993, "seg": "Low-Balance Casual Spenders"}, {"x": -0.648, "y": -0.643, "seg": "Low-Balance Casual Spenders"}, {"x": -1.383, "y": -1.432, "seg": "Low-Balance Casual Spenders"}, {"x": 0.809, "y": -1.907, "seg": "Low-Balance Casual Spenders"}, {"x": 1.048, "y": -0.627, "seg": "Low-Balance Casual Spenders"}, {"x": 0.057, "y": -2.067, "seg": "Low-Balance Casual Spenders"}, {"x": -1.355, "y": -1.042, "seg": "Low-Balance Casual Spenders"}, {"x": 0.788, "y": -1.795, "seg": "Low-Balance Casual Spenders"}, {"x": -0.869, "y": -0.987, "seg": "Low-Balance Casual Spenders"}, {"x": -0.015, "y": -2.054, "seg": "Low-Balance Casual Spenders"}, {"x": -0.156, "y": -0.589, "seg": "Low-Balance Casual Spenders"}, {"x": -0.109, "y": -1.834, "seg": "Low-Balance Casual Spenders"}, {"x": -0.628, "y": -0.955, "seg": "Low-Balance Casual Spenders"}, {"x": -0.708, "y": -1.478, "seg": "Low-Balance Casual Spenders"}, {"x": -0.911, "y": -0.732, "seg": "Low-Balance Casual Spenders"}, {"x": -0.759, "y": -1.105, "seg": "Low-Balance Casual Spenders"}, {"x": -0.632, "y": -0.784, "seg": "Low-Balance Casual Spenders"}, {"x": -1.362, "y": -1.612, "seg": "Low-Balance Casual Spenders"}, {"x": 0.173, "y": -2.033, "seg": "Low-Balance Casual Spenders"}, {"x": 2.906, "y": -2.629, "seg": "Low-Balance Casual Spenders"}, {"x": -0.848, "y": -1.139, "seg": "Low-Balance Casual Spenders"}, {"x": -1.074, "y": -1.457, "seg": "Low-Balance Casual Spenders"}, {"x": -0.938, "y": -1.413, "seg": "Low-Balance Casual Spenders"}, {"x": -1.188, "y": -0.917, "seg": "Low-Balance Casual Spenders"}, {"x": 0.096, "y": -1.816, "seg": "Low-Balance Casual Spenders"}, {"x": -1.189, "y": -1.134, "seg": "Low-Balance Casual Spenders"}, {"x": 1.403, "y": -1.242, "seg": "Low-Balance Casual Spenders"}, {"x": -0.665, "y": 0.929, "seg": "Low-Balance Casual Spenders"}, {"x": -1.929, "y": -1.234, "seg": "Low-Balance Casual Spenders"}, {"x": -1.357, "y": -0.781, "seg": "Low-Balance Casual Spenders"}, {"x": -1.091, "y": -1.646, "seg": "Low-Balance Casual Spenders"}, {"x": -1.762, "y": -1.382, "seg": "Low-Balance Casual Spenders"}, {"x": 0.367, "y": -0.559, "seg": "Low-Balance Casual Spenders"}, {"x": -1.139, "y": -1.142, "seg": "Low-Balance Casual Spenders"}, {"x": 0.278, "y": -1.194, "seg": "Low-Balance Casual Spenders"}, {"x": -1.105, "y": -1.207, "seg": "Low-Balance Casual Spenders"}, {"x": -0.98, "y": -1.901, "seg": "Low-Balance Casual Spenders"}, {"x": 1.426, "y": -0.847, "seg": "Low-Balance Casual Spenders"}, {"x": -0.901, "y": -1.336, "seg": "Low-Balance Casual Spenders"}, {"x": -1.43, "y": -1.31, "seg": "Low-Balance Casual Spenders"}, {"x": -0.265, "y": -1.63, "seg": "Low-Balance Casual Spenders"}, {"x": -0.629, "y": -1.37, "seg": "Low-Balance Casual Spenders"}, {"x": 1.777, "y": -2.53, "seg": "Low-Balance Casual Spenders"}, {"x": -0.632, "y": -0.784, "seg": "Low-Balance Casual Spenders"}, {"x": -0.57, "y": -0.967, "seg": "Low-Balance Casual Spenders"}, {"x": -1.151, "y": 0.027, "seg": "Low-Balance Casual Spenders"}, {"x": -1.835, "y": -0.689, "seg": "Low-Balance Casual Spenders"}, {"x": -1.007, "y": -1.254, "seg": "Low-Balance Casual Spenders"}, {"x": -0.712, "y": -0.204, "seg": "Low-Balance Casual Spenders"}, {"x": -0.664, "y": -1.231, "seg": "Low-Balance Casual Spenders"}, {"x": -1.682, "y": -1.018, "seg": "Low-Balance Casual Spenders"}, {"x": 1.778, "y": -1.747, "seg": "Low-Balance Casual Spenders"}, {"x": 2.61, "y": -1.961, "seg": "Low-Balance Casual Spenders"}, {"x": 0.575, "y": -1.084, "seg": "Low-Balance Casual Spenders"}, {"x": -2.32, "y": -0.773, "seg": "Low-Balance Casual Spenders"}, {"x": -1.494, "y": -1.122, "seg": "Low-Balance Casual Spenders"}, {"x": -1.121, "y": -1.033, "seg": "Low-Balance Casual Spenders"}, {"x": 0.037, "y": -0.07, "seg": "Low-Balance Casual Spenders"}, {"x": -1.956, "y": -0.151, "seg": "Low-Balance Casual Spenders"}, {"x": 0.462, "y": -0.461, "seg": "Low-Balance Casual Spenders"}, {"x": 0.346, "y": -2.178, "seg": "Low-Balance Casual Spenders"}, {"x": 0.599, "y": -0.573, "seg": "Low-Balance Casual Spenders"}, {"x": -0.605, "y": 0.863, "seg": "Low-Balance Casual Spenders"}, {"x": -1.773, "y": -1.055, "seg": "Low-Balance Casual Spenders"}, {"x": 1.689, "y": -2.03, "seg": "Low-Balance Casual Spenders"}, {"x": -1.957, "y": -1.288, "seg": "Low-Balance Casual Spenders"}, {"x": 0.197, "y": -0.482, "seg": "Low-Balance Casual Spenders"}, {"x": -1.935, "y": -1.257, "seg": "Low-Balance Casual Spenders"}, {"x": 0.353, "y": 0.836, "seg": "Low-Balance Casual Spenders"}, {"x": -0.146, "y": -1.456, "seg": "Low-Balance Casual Spenders"}, {"x": -1.74, "y": -1.325, "seg": "Low-Balance Casual Spenders"}, {"x": 1.563, "y": 0.397, "seg": "Low-Balance Casual Spenders"}, {"x": -1.588, "y": -1.527, "seg": "Low-Balance Casual Spenders"}, {"x": -1.418, "y": -0.978, "seg": "Low-Balance Casual Spenders"}, {"x": -1.188, "y": -1.959, "seg": "Low-Balance Casual Spenders"}, {"x": -0.902, "y": 0.204, "seg": "Low-Balance Casual Spenders"}, {"x": -1.735, "y": -1.528, "seg": "Low-Balance Casual Spenders"}, {"x": 0.444, "y": 0.626, "seg": "Low-Balance Casual Spenders"}, {"x": 1.19, "y": -1.797, "seg": "Low-Balance Casual Spenders"}, {"x": 0.475, "y": -0.236, "seg": "Low-Balance Casual Spenders"}, {"x": -0.467, "y": -1.139, "seg": "Low-Balance Casual Spenders"}, {"x": -1.398, "y": -1.175, "seg": "Low-Balance Casual Spenders"}, {"x": 1.467, "y": -1.014, "seg": "Low-Balance Casual Spenders"}, {"x": 1.06, "y": -1.831, "seg": "Low-Balance Casual Spenders"}, {"x": -1.471, "y": -1.737, "seg": "Low-Balance Casual Spenders"}, {"x": -1.649, "y": -0.933, "seg": "Low-Balance Casual Spenders"}, {"x": -0.747, "y": -0.447, "seg": "Low-Balance Casual Spenders"}, {"x": -1.198, "y": -1.154, "seg": "Low-Balance Casual Spenders"}, {"x": 2.117, "y": -1.636, "seg": "Low-Balance Casual Spenders"}, {"x": -0.715, "y": -1.623, "seg": "Low-Balance Casual Spenders"}, {"x": -1.286, "y": -1.147, "seg": "Low-Balance Casual Spenders"}, {"x": -0.861, "y": -1.227, "seg": "Low-Balance Casual Spenders"}, {"x": -1.218, "y": -1.2, "seg": "Low-Balance Casual Spenders"}, {"x": -1.593, "y": -0.869, "seg": "Low-Balance Casual Spenders"}, {"x": 0.572, "y": -1.538, "seg": "Low-Balance Casual Spenders"}, {"x": 2.119, "y": 0.052, "seg": "Low-Balance Casual Spenders"}, {"x": -2.323, "y": -0.955, "seg": "Low-Balance Casual Spenders"}, {"x": 1.084, "y": -0.901, "seg": "Low-Balance Casual Spenders"}, {"x": -2.022, "y": -1.044, "seg": "Low-Balance Casual Spenders"}, {"x": 1.65, "y": -1.899, "seg": "Low-Balance Casual Spenders"}, {"x": 0.539, "y": -0.813, "seg": "Low-Balance Casual Spenders"}, {"x": -1.507, "y": -0.259, "seg": "Low-Balance Casual Spenders"}, {"x": 2.256, "y": -2.302, "seg": "Low-Balance Casual Spenders"}, {"x": 1.283, "y": -1.042, "seg": "Low-Balance Casual Spenders"}, {"x": 1.973, "y": -1.924, "seg": "Low-Balance Casual Spenders"}, {"x": -0.542, "y": -0.584, "seg": "Low-Balance Casual Spenders"}, {"x": 1.13, "y": -2.013, "seg": "Low-Balance Casual Spenders"}, {"x": -1.381, "y": -1.754, "seg": "Low-Balance Casual Spenders"}, {"x": -0.834, "y": -1.706, "seg": "Low-Balance Casual Spenders"}, {"x": 0.698, "y": -0.254, "seg": "Low-Balance Casual Spenders"}, {"x": 0.43, "y": -1.077, "seg": "Low-Balance Casual Spenders"}, {"x": -1.788, "y": -1.376, "seg": "Low-Balance Casual Spenders"}, {"x": 2.46, "y": -2.085, "seg": "Low-Balance Casual Spenders"}, {"x": -0.958, "y": -1.999, "seg": "Low-Balance Casual Spenders"}, {"x": 1.199, "y": -0.295, "seg": "Low-Balance Casual Spenders"}, {"x": -1.275, "y": -1.428, "seg": "Low-Balance Casual Spenders"}, {"x": 1.754, "y": -1.541, "seg": "Low-Balance Casual Spenders"}, {"x": 0.97, "y": 0.429, "seg": "Low-Balance Casual Spenders"}, {"x": -0.707, "y": -1.588, "seg": "Low-Balance Casual Spenders"}, {"x": -0.672, "y": -1.058, "seg": "Low-Balance Casual Spenders"}, {"x": -1.801, "y": -1.304, "seg": "Low-Balance Casual Spenders"}, {"x": 0.81, "y": -2.457, "seg": "Low-Balance Casual Spenders"}, {"x": -0.706, "y": -1.306, "seg": "Low-Balance Casual Spenders"}, {"x": -1.211, "y": -1.956, "seg": "Low-Balance Casual Spenders"}, {"x": -1.361, "y": -1.959, "seg": "Low-Balance Casual Spenders"}, {"x": 1.488, "y": -1.615, "seg": "Low-Balance Casual Spenders"}, {"x": 1.605, "y": -0.493, "seg": "Low-Balance Casual Spenders"}, {"x": -0.842, "y": 0.088, "seg": "Low-Balance Casual Spenders"}, {"x": 0.158, "y": 0.365, "seg": "Low-Balance Casual Spenders"}, {"x": -1.288, "y": -0.645, "seg": "Low-Balance Casual Spenders"}, {"x": -1.334, "y": -1.314, "seg": "Low-Balance Casual Spenders"}, {"x": -0.712, "y": -1.873, "seg": "Low-Balance Casual Spenders"}, {"x": -0.086, "y": -0.342, "seg": "Low-Balance Casual Spenders"}, {"x": -1.396, "y": 0.106, "seg": "Low-Balance Casual Spenders"}, {"x": -1.754, "y": 0.208, "seg": "Low-Balance Casual Spenders"}, {"x": -1.611, "y": -1.233, "seg": "Low-Balance Casual Spenders"}, {"x": -1.811, "y": -0.021, "seg": "Low-Balance Casual Spenders"}, {"x": -2.17, "y": -0.036, "seg": "Low-Balance Casual Spenders"}, {"x": 0.599, "y": -1.264, "seg": "Low-Balance Casual Spenders"}, {"x": 0.694, "y": -1.814, "seg": "Low-Balance Casual Spenders"}, {"x": -1.363, "y": -0.877, "seg": "Low-Balance Casual Spenders"}, {"x": -0.774, "y": -2.058, "seg": "Low-Balance Casual Spenders"}, {"x": -1.492, "y": -0.909, "seg": "Low-Balance Casual Spenders"}, {"x": 0.651, "y": -0.439, "seg": "Low-Balance Casual Spenders"}, {"x": 1.48, "y": -1.015, "seg": "Low-Balance Casual Spenders"}, {"x": 0.201, "y": -1.655, "seg": "Low-Balance Casual Spenders"}, {"x": -1.447, "y": -0.712, "seg": "Low-Balance Casual Spenders"}, {"x": 1.682, "y": -1.593, "seg": "Low-Balance Casual Spenders"}, {"x": -1.286, "y": -1.32, "seg": "Low-Balance Casual Spenders"}, {"x": -1.481, "y": -1.172, "seg": "Low-Balance Casual Spenders"}, {"x": -0.485, "y": -0.897, "seg": "Low-Balance Casual Spenders"}, {"x": 0.385, "y": -1.809, "seg": "Low-Balance Casual Spenders"}, {"x": -0.992, "y": -1.148, "seg": "Low-Balance Casual Spenders"}, {"x": -0.78, "y": -1.233, "seg": "Low-Balance Casual Spenders"}, {"x": 0.34, "y": -0.156, "seg": "Low-Balance Casual Spenders"}, {"x": -0.146, "y": -1.794, "seg": "Low-Balance Casual Spenders"}, {"x": -1.264, "y": -1.308, "seg": "Low-Balance Casual Spenders"}, {"x": -0.313, "y": -1.707, "seg": "Low-Balance Casual Spenders"}, {"x": 0.881, "y": -1.125, "seg": "Low-Balance Casual Spenders"}, {"x": 0.254, "y": -1.307, "seg": "Low-Balance Casual Spenders"}, {"x": 2.285, "y": -2.423, "seg": "Low-Balance Casual Spenders"}, {"x": 0.617, "y": -1.739, "seg": "Low-Balance Casual Spenders"}, {"x": 0.316, "y": -0.724, "seg": "Low-Balance Casual Spenders"}, {"x": 1.209, "y": -1.479, "seg": "Low-Balance Casual Spenders"}, {"x": -2.106, "y": -0.282, "seg": "Low-Balance Casual Spenders"}, {"x": -0.875, "y": -1.671, "seg": "Low-Balance Casual Spenders"}, {"x": -1.379, "y": -0.9, "seg": "Low-Balance Casual Spenders"}, {"x": 1.323, "y": -1.831, "seg": "Low-Balance Casual Spenders"}, {"x": -1.622, "y": -1.14, "seg": "Low-Balance Casual Spenders"}, {"x": -0.881, "y": -2.074, "seg": "Low-Balance Casual Spenders"}, {"x": -0.58, "y": -1.949, "seg": "Low-Balance Casual Spenders"}, {"x": -0.42, "y": -0.698, "seg": "Low-Balance Casual Spenders"}, {"x": 0.261, "y": -1.771, "seg": "Low-Balance Casual Spenders"}, {"x": -0.753, "y": -0.795, "seg": "Low-Balance Casual Spenders"}, {"x": -0.706, "y": -0.901, "seg": "Low-Balance Casual Spenders"}, {"x": -0.276, "y": -1.761, "seg": "Low-Balance Casual Spenders"}, {"x": 0.59, "y": -1.852, "seg": "Low-Balance Casual Spenders"}, {"x": -1.515, "y": -1.415, "seg": "Low-Balance Casual Spenders"}, {"x": -1.38, "y": -1.026, "seg": "Low-Balance Casual Spenders"}, {"x": -0.032, "y": -0.838, "seg": "Low-Balance Casual Spenders"}, {"x": -1.321, "y": -0.926, "seg": "Low-Balance Casual Spenders"}, {"x": -0.19, "y": -1.693, "seg": "Low-Balance Casual Spenders"}, {"x": 0.439, "y": -1.476, "seg": "Low-Balance Casual Spenders"}, {"x": -0.845, "y": -0.347, "seg": "Low-Balance Casual Spenders"}, {"x": 0.673, "y": -1.656, "seg": "Low-Balance Casual Spenders"}, {"x": 0.245, "y": -1.27, "seg": "Low-Balance Casual Spenders"}, {"x": -1.922, "y": -1.08, "seg": "Low-Balance Casual Spenders"}, {"x": 2.46, "y": -0.695, "seg": "Low-Balance Casual Spenders"}, {"x": -0.303, "y": -1.22, "seg": "Low-Balance Casual Spenders"}, {"x": 0.213, "y": -1.607, "seg": "Low-Balance Casual Spenders"}, {"x": 0.117, "y": -1.233, "seg": "Low-Balance Casual Spenders"}, {"x": -0.472, "y": 0.161, "seg": "Low-Balance Casual Spenders"}, {"x": -1.084, "y": -1.955, "seg": "Low-Balance Casual Spenders"}, {"x": -1.653, "y": -1.081, "seg": "Low-Balance Casual Spenders"}, {"x": -1.121, "y": -1.483, "seg": "Low-Balance Casual Spenders"}, {"x": 0.372, "y": -1.513, "seg": "Low-Balance Casual Spenders"}, {"x": -1.447, "y": -1.432, "seg": "Low-Balance Casual Spenders"}, {"x": -1.011, "y": -0.94, "seg": "Low-Balance Casual Spenders"}, {"x": 0.499, "y": -1.944, "seg": "Low-Balance Casual Spenders"}, {"x": -1.258, "y": -1.389, "seg": "Low-Balance Casual Spenders"}, {"x": -1.101, "y": -1.558, "seg": "Low-Balance Casual Spenders"}, {"x": -1.38, "y": -1.78, "seg": "Low-Balance Casual Spenders"}, {"x": -0.647, "y": -1.45, "seg": "Low-Balance Casual Spenders"}, {"x": 0.187, "y": -2.083, "seg": "Low-Balance Casual Spenders"}, {"x": -0.944, "y": -1.952, "seg": "Low-Balance Casual Spenders"}, {"x": -1.718, "y": -0.964, "seg": "Low-Balance Casual Spenders"}, {"x": -1.126, "y": -0.943, "seg": "Low-Balance Casual Spenders"}, {"x": -0.402, "y": -1.268, "seg": "Low-Balance Casual Spenders"}, {"x": -1.322, "y": -1.118, "seg": "Low-Balance Casual Spenders"}, {"x": 0.209, "y": -1.396, "seg": "Low-Balance Casual Spenders"}, {"x": 0.352, "y": -1.678, "seg": "Low-Balance Casual Spenders"}, {"x": -0.768, "y": -0.724, "seg": "Low-Balance Casual Spenders"}, {"x": -0.674, "y": -1.477, "seg": "Low-Balance Casual Spenders"}, {"x": -0.924, "y": -1.239, "seg": "Low-Balance Casual Spenders"}, {"x": -0.975, "y": -1.11, "seg": "Low-Balance Casual Spenders"}, {"x": 0.672, "y": -1.746, "seg": "Low-Balance Casual Spenders"}, {"x": -0.083, "y": -1.492, "seg": "Low-Balance Casual Spenders"}, {"x": 1.318, "y": -1.946, "seg": "Low-Balance Casual Spenders"}, {"x": -0.722, "y": -1.776, "seg": "Low-Balance Casual Spenders"}, {"x": -1.471, "y": -2.005, "seg": "Low-Balance Casual Spenders"}, {"x": 0.998, "y": -1.691, "seg": "Low-Balance Casual Spenders"}, {"x": -1.512, "y": -1.584, "seg": "Low-Balance Casual Spenders"}, {"x": 0.257, "y": -2.035, "seg": "Low-Balance Casual Spenders"}, {"x": -1.647, "y": -1.262, "seg": "Low-Balance Casual Spenders"}, {"x": -1.375, "y": -1.228, "seg": "Low-Balance Casual Spenders"}, {"x": 0.593, "y": -2.051, "seg": "Low-Balance Casual Spenders"}, {"x": 0.027, "y": -1.473, "seg": "Low-Balance Casual Spenders"}, {"x": 0.07, "y": -1.348, "seg": "Low-Balance Casual Spenders"}, {"x": -0.692, "y": -0.068, "seg": "Low-Balance Casual Spenders"}, {"x": -0.338, "y": -1.336, "seg": "Low-Balance Casual Spenders"}, {"x": 1.759, "y": -1.857, "seg": "Low-Balance Casual Spenders"}, {"x": -0.723, "y": -1.284, "seg": "Low-Balance Casual Spenders"}, {"x": 0.361, "y": -1.828, "seg": "Low-Balance Casual Spenders"}, {"x": 1.394, "y": -1.834, "seg": "Low-Balance Casual Spenders"}, {"x": 1.311, "y": -1.557, "seg": "Low-Balance Casual Spenders"}, {"x": -0.656, "y": -2.118, "seg": "Low-Balance Casual Spenders"}, {"x": -1.348, "y": -0.711, "seg": "Low-Balance Casual Spenders"}, {"x": 1.855, "y": -2.345, "seg": "Low-Balance Casual Spenders"}, {"x": 2.053, "y": -0.937, "seg": "Low-Balance Casual Spenders"}, {"x": -1.192, "y": -1.742, "seg": "Low-Balance Casual Spenders"}, {"x": -1.766, "y": -0.957, "seg": "Low-Balance Casual Spenders"}, {"x": 0.012, "y": -1.623, "seg": "Low-Balance Casual Spenders"}, {"x": -0.434, "y": -1.003, "seg": "Low-Balance Casual Spenders"}, {"x": -1.006, "y": -0.772, "seg": "Low-Balance Casual Spenders"}, {"x": -1.634, "y": -1.33, "seg": "Low-Balance Casual Spenders"}, {"x": 0.661, "y": -1.833, "seg": "Low-Balance Casual Spenders"}, {"x": -1.198, "y": -1.453, "seg": "Low-Balance Casual Spenders"}, {"x": -0.991, "y": -1.099, "seg": "Low-Balance Casual Spenders"}, {"x": 1.417, "y": -1.782, "seg": "Low-Balance Casual Spenders"}, {"x": 0.799, "y": -0.65, "seg": "Low-Balance Casual Spenders"}, {"x": 0.427, "y": -1.717, "seg": "Low-Balance Casual Spenders"}, {"x": -0.227, "y": 0.938, "seg": "Low-Balance Casual Spenders"}, {"x": -1.223, "y": -1.265, "seg": "Low-Balance Casual Spenders"}, {"x": 2.017, "y": -1.289, "seg": "Low-Balance Casual Spenders"}, {"x": -1.478, "y": -1.491, "seg": "Low-Balance Casual Spenders"}, {"x": -0.752, "y": -1.956, "seg": "Low-Balance Casual Spenders"}, {"x": -1.372, "y": -1.271, "seg": "Low-Balance Casual Spenders"}, {"x": -0.878, "y": -2.011, "seg": "Low-Balance Casual Spenders"}, {"x": -0.984, "y": -0.138, "seg": "Low-Balance Casual Spenders"}, {"x": 0.973, "y": -1.981, "seg": "Low-Balance Casual Spenders"}, {"x": 0.443, "y": -1.011, "seg": "Low-Balance Casual Spenders"}, {"x": -1.766, "y": -1.053, "seg": "Low-Balance Casual Spenders"}, {"x": -0.311, "y": -0.971, "seg": "Low-Balance Casual Spenders"}, {"x": -1.634, "y": -1.033, "seg": "Low-Balance Casual Spenders"}, {"x": -1.522, "y": -1.006, "seg": "Low-Balance Casual Spenders"}, {"x": 0.322, "y": -0.272, "seg": "Low-Balance Casual Spenders"}, {"x": 1.157, "y": -0.953, "seg": "Low-Balance Casual Spenders"}, {"x": 0.801, "y": -1.998, "seg": "Low-Balance Casual Spenders"}, {"x": -0.678, "y": -0.761, "seg": "Low-Balance Casual Spenders"}, {"x": -1.165, "y": -0.568, "seg": "Low-Balance Casual Spenders"}, {"x": 2.288, "y": -1.148, "seg": "Low-Balance Casual Spenders"}, {"x": -1.451, "y": -1.454, "seg": "Low-Balance Casual Spenders"}, {"x": -0.25, "y": -0.78, "seg": "Low-Balance Casual Spenders"}, {"x": 0.155, "y": -1.66, "seg": "Low-Balance Casual Spenders"}, {"x": -0.534, "y": -0.354, "seg": "Low-Balance Casual Spenders"}, {"x": -0.457, "y": -1.749, "seg": "Low-Balance Casual Spenders"}, {"x": 2.415, "y": -1.999, "seg": "Low-Balance Casual Spenders"}, {"x": 1.316, "y": -0.071, "seg": "Low-Balance Casual Spenders"}, {"x": -0.35, "y": -0.998, "seg": "Low-Balance Casual Spenders"}, {"x": 0.184, "y": -1.764, "seg": "Low-Balance Casual Spenders"}, {"x": -0.198, "y": -0.765, "seg": "Low-Balance Casual Spenders"}, {"x": -1.836, "y": -0.967, "seg": "Low-Balance Casual Spenders"}, {"x": -0.739, "y": -1.603, "seg": "Low-Balance Casual Spenders"}, {"x": 0.175, "y": -1.636, "seg": "Low-Balance Casual Spenders"}, {"x": -1.103, "y": -0.904, "seg": "Low-Balance Casual Spenders"}, {"x": -1.461, "y": -1.423, "seg": "Low-Balance Casual Spenders"}, {"x": 1.223, "y": -1.538, "seg": "Low-Balance Casual Spenders"}, {"x": 2.247, "y": -2.483, "seg": "Low-Balance Casual Spenders"}, {"x": 0.792, "y": -0.985, "seg": "Low-Balance Casual Spenders"}, {"x": -1.291, "y": -0.648, "seg": "Low-Balance Casual Spenders"}, {"x": -0.228, "y": -2.149, "seg": "Low-Balance Casual Spenders"}, {"x": -1.187, "y": -1.023, "seg": "Low-Balance Casual Spenders"}, {"x": -1.695, "y": -0.769, "seg": "Low-Balance Casual Spenders"}, {"x": -0.496, "y": 0.122, "seg": "Low-Balance Casual Spenders"}, {"x": -1.485, "y": -1.266, "seg": "Low-Balance Casual Spenders"}, {"x": -0.494, "y": -1.434, "seg": "Low-Balance Casual Spenders"}, {"x": 0.757, "y": -2.026, "seg": "Low-Balance Casual Spenders"}, {"x": -1.697, "y": -1.017, "seg": "Low-Balance Casual Spenders"}, {"x": 0.436, "y": -1.965, "seg": "Low-Balance Casual Spenders"}, {"x": -0.479, "y": -1.352, "seg": "Low-Balance Casual Spenders"}, {"x": -2.222, "y": -1.226, "seg": "Low-Balance Casual Spenders"}, {"x": -0.456, "y": -1.09, "seg": "Low-Balance Casual Spenders"}, {"x": -1.842, "y": -0.669, "seg": "Low-Balance Casual Spenders"}, {"x": 1.474, "y": -0.294, "seg": "Low-Balance Casual Spenders"}, {"x": 1.573, "y": -1.263, "seg": "Low-Balance Casual Spenders"}, {"x": 0.44, "y": -1.182, "seg": "Low-Balance Casual Spenders"}, {"x": 0.625, "y": -0.104, "seg": "Low-Balance Casual Spenders"}, {"x": 0.746, "y": -1.551, "seg": "Low-Balance Casual Spenders"}, {"x": -0.553, "y": -1.805, "seg": "Low-Balance Casual Spenders"}, {"x": -0.947, "y": -1.145, "seg": "Low-Balance Casual Spenders"}, {"x": 2.36, "y": -2.069, "seg": "Low-Balance Casual Spenders"}, {"x": -0.211, "y": -1.606, "seg": "Low-Balance Casual Spenders"}, {"x": 0.74, "y": -1.595, "seg": "Low-Balance Casual Spenders"}, {"x": -1.488, "y": -1.61, "seg": "Low-Balance Casual Spenders"}, {"x": -0.645, "y": -1.976, "seg": "Low-Balance Casual Spenders"}, {"x": -1.059, "y": -1.478, "seg": "Low-Balance Casual Spenders"}, {"x": -0.682, "y": -1.103, "seg": "Low-Balance Casual Spenders"}, {"x": -0.218, "y": -1.101, "seg": "Low-Balance Casual Spenders"}, {"x": 0.04, "y": -1.721, "seg": "Low-Balance Casual Spenders"}, {"x": 1.176, "y": -1.128, "seg": "Low-Balance Casual Spenders"}, {"x": -1.55, "y": -1.397, "seg": "Low-Balance Casual Spenders"}, {"x": -1.785, "y": -1.193, "seg": "Low-Balance Casual Spenders"}, {"x": 0.302, "y": -0.296, "seg": "Low-Balance Casual Spenders"}, {"x": -0.252, "y": -1.181, "seg": "Low-Balance Casual Spenders"}, {"x": -0.699, "y": -1.631, "seg": "Low-Balance Casual Spenders"}, {"x": -0.671, "y": -0.476, "seg": "Low-Balance Casual Spenders"}, {"x": 2.573, "y": -1.907, "seg": "Low-Balance Casual Spenders"}, {"x": 2.234, "y": -2.48, "seg": "Low-Balance Casual Spenders"}, {"x": -0.688, "y": -1.242, "seg": "Low-Balance Casual Spenders"}, {"x": 0.745, "y": -1.253, "seg": "Low-Balance Casual Spenders"}, {"x": -1.083, "y": -1.05, "seg": "Low-Balance Casual Spenders"}, {"x": -0.508, "y": -0.874, "seg": "Low-Balance Casual Spenders"}, {"x": -0.655, "y": -2.086, "seg": "Low-Balance Casual Spenders"}, {"x": -0.367, "y": -1.318, "seg": "Low-Balance Casual Spenders"}, {"x": 2.428, "y": -2.335, "seg": "Low-Balance Casual Spenders"}, {"x": -1.489, "y": -1.359, "seg": "Low-Balance Casual Spenders"}, {"x": -0.516, "y": -1.684, "seg": "Low-Balance Casual Spenders"}, {"x": 1.35, "y": -1.157, "seg": "Low-Balance Casual Spenders"}, {"x": -0.585, "y": 0.452, "seg": "Low-Balance Casual Spenders"}, {"x": -1.314, "y": -1.504, "seg": "Low-Balance Casual Spenders"}, {"x": -1.056, "y": -0.908, "seg": "Low-Balance Casual Spenders"}, {"x": 1.495, "y": -1.082, "seg": "Low-Balance Casual Spenders"}, {"x": 0.676, "y": -2.281, "seg": "Low-Balance Casual Spenders"}, {"x": -1.638, "y": -1.041, "seg": "Low-Balance Casual Spenders"}, {"x": -0.655, "y": -1.0, "seg": "Low-Balance Casual Spenders"}, {"x": -1.462, "y": -0.577, "seg": "Low-Balance Casual Spenders"}, {"x": 2.134, "y": -2.214, "seg": "Low-Balance Casual Spenders"}, {"x": 0.622, "y": -1.705, "seg": "Low-Balance Casual Spenders"}, {"x": 0.046, "y": -0.673, "seg": "Low-Balance Casual Spenders"}, {"x": -1.873, "y": -0.422, "seg": "Low-Balance Casual Spenders"}, {"x": -1.329, "y": -0.573, "seg": "Low-Balance Casual Spenders"}, {"x": 2.201, "y": -2.478, "seg": "Low-Balance Casual Spenders"}, {"x": -0.044, "y": -1.106, "seg": "Low-Balance Casual Spenders"}, {"x": -1.012, "y": -1.928, "seg": "Low-Balance Casual Spenders"}, {"x": -1.148, "y": 1.01, "seg": "Low-Balance Casual Spenders"}, {"x": -0.111, "y": -2.065, "seg": "Low-Balance Casual Spenders"}, {"x": -0.773, "y": -0.008, "seg": "Low-Balance Casual Spenders"}, {"x": 1.847, "y": -0.565, "seg": "Low-Balance Casual Spenders"}, {"x": 1.883, "y": -1.865, "seg": "Low-Balance Casual Spenders"}, {"x": -1.413, "y": -1.09, "seg": "Low-Balance Casual Spenders"}, {"x": -1.022, "y": -1.753, "seg": "Low-Balance Casual Spenders"}, {"x": 1.328, "y": -2.339, "seg": "Low-Balance Casual Spenders"}, {"x": 2.097, "y": -0.916, "seg": "Low-Balance Casual Spenders"}, {"x": -1.884, "y": -1.133, "seg": "Low-Balance Casual Spenders"}, {"x": -1.281, "y": -1.609, "seg": "Low-Balance Casual Spenders"}, {"x": 1.77, "y": -1.607, "seg": "Low-Balance Casual Spenders"}, {"x": -1.687, "y": -1.295, "seg": "Low-Balance Casual Spenders"}, {"x": -1.308, "y": -1.47, "seg": "Low-Balance Casual Spenders"}, {"x": -1.11, "y": -1.365, "seg": "Low-Balance Casual Spenders"}, {"x": 0.188, "y": -1.917, "seg": "Low-Balance Casual Spenders"}, {"x": 1.019, "y": -0.65, "seg": "Low-Balance Casual Spenders"}, {"x": -0.394, "y": -1.731, "seg": "Low-Balance Casual Spenders"}, {"x": 1.886, "y": -1.553, "seg": "Low-Balance Casual Spenders"}, {"x": 1.072, "y": -1.836, "seg": "Low-Balance Casual Spenders"}, {"x": 2.066, "y": -1.467, "seg": "Low-Balance Casual Spenders"}, {"x": 0.508, "y": -1.588, "seg": "Low-Balance Casual Spenders"}, {"x": -0.346, "y": -0.442, "seg": "Low-Balance Casual Spenders"}, {"x": 0.549, "y": -1.89, "seg": "Low-Balance Casual Spenders"}, {"x": -1.337, "y": -1.274, "seg": "Low-Balance Casual Spenders"}, {"x": 0.283, "y": -0.169, "seg": "Low-Balance Casual Spenders"}, {"x": 0.742, "y": -1.832, "seg": "Low-Balance Casual Spenders"}, {"x": -0.569, "y": -0.533, "seg": "Low-Balance Casual Spenders"}, {"x": -1.029, "y": -1.008, "seg": "Low-Balance Casual Spenders"}, {"x": -0.767, "y": -1.763, "seg": "Low-Balance Casual Spenders"}, {"x": -1.224, "y": -1.342, "seg": "Low-Balance Casual Spenders"}, {"x": 1.817, "y": -2.241, "seg": "Low-Balance Casual Spenders"}, {"x": -0.801, "y": -0.925, "seg": "Low-Balance Casual Spenders"}, {"x": -0.565, "y": -0.594, "seg": "Low-Balance Casual Spenders"}, {"x": -0.331, "y": -1.978, "seg": "Low-Balance Casual Spenders"}, {"x": -0.314, "y": -0.656, "seg": "Low-Balance Casual Spenders"}, {"x": -0.579, "y": -1.659, "seg": "Low-Balance Casual Spenders"}, {"x": -1.084, "y": -1.356, "seg": "Low-Balance Casual Spenders"}, {"x": -0.708, "y": -2.142, "seg": "Low-Balance Casual Spenders"}, {"x": -0.192, "y": -0.316, "seg": "Low-Balance Casual Spenders"}, {"x": -1.634, "y": -1.432, "seg": "Low-Balance Casual Spenders"}, {"x": -0.854, "y": -1.298, "seg": "Low-Balance Casual Spenders"}, {"x": 1.475, "y": -1.794, "seg": "Low-Balance Casual Spenders"}, {"x": 1.977, "y": -2.307, "seg": "Low-Balance Casual Spenders"}, {"x": 0.108, "y": -1.381, "seg": "Low-Balance Casual Spenders"}, {"x": -1.193, "y": -1.536, "seg": "Low-Balance Casual Spenders"}, {"x": -1.393, "y": -0.838, "seg": "Low-Balance Casual Spenders"}, {"x": -1.405, "y": -1.337, "seg": "Low-Balance Casual Spenders"}, {"x": -0.257, "y": -0.902, "seg": "Low-Balance Casual Spenders"}, {"x": -0.651, "y": -1.392, "seg": "Low-Balance Casual Spenders"}, {"x": -0.745, "y": -2.02, "seg": "Low-Balance Casual Spenders"}, {"x": 2.218, "y": -0.739, "seg": "Low-Balance Casual Spenders"}, {"x": -0.649, "y": -0.961, "seg": "Low-Balance Casual Spenders"}, {"x": -1.157, "y": -0.545, "seg": "Low-Balance Casual Spenders"}, {"x": -0.315, "y": -1.961, "seg": "Low-Balance Casual Spenders"}, {"x": -0.921, "y": -0.983, "seg": "Low-Balance Casual Spenders"}, {"x": 0.489, "y": -0.339, "seg": "Low-Balance Casual Spenders"}, {"x": 0.28, "y": -1.449, "seg": "Low-Balance Casual Spenders"}, {"x": -0.058, "y": -1.381, "seg": "Low-Balance Casual Spenders"}, {"x": 1.585, "y": -0.165, "seg": "Low-Balance Casual Spenders"}, {"x": 1.385, "y": -2.344, "seg": "Low-Balance Casual Spenders"}, {"x": 0.527, "y": -0.645, "seg": "Low-Balance Casual Spenders"}, {"x": -0.879, "y": -1.21, "seg": "Low-Balance Casual Spenders"}, {"x": -1.246, "y": -1.051, "seg": "Low-Balance Casual Spenders"}, {"x": -1.629, "y": -0.963, "seg": "Low-Balance Casual Spenders"}, {"x": -0.3, "y": -0.668, "seg": "Low-Balance Casual Spenders"}, {"x": -0.534, "y": -0.6, "seg": "Low-Balance Casual Spenders"}, {"x": 0.791, "y": -1.287, "seg": "Low-Balance Casual Spenders"}, {"x": 2.061, "y": -0.246, "seg": "Low-Balance Casual Spenders"}, {"x": -1.62, "y": -1.831, "seg": "Low-Balance Casual Spenders"}, {"x": 1.783, "y": -0.662, "seg": "Low-Balance Casual Spenders"}, {"x": -1.276, "y": -0.241, "seg": "Low-Balance Casual Spenders"}, {"x": 1.094, "y": -2.186, "seg": "Low-Balance Casual Spenders"}, {"x": 1.083, "y": -1.065, "seg": "Low-Balance Casual Spenders"}, {"x": -0.495, "y": -1.248, "seg": "Low-Balance Casual Spenders"}, {"x": -1.632, "y": -0.981, "seg": "Low-Balance Casual Spenders"}, {"x": -0.891, "y": -1.369, "seg": "Low-Balance Casual Spenders"}, {"x": -1.5, "y": -1.112, "seg": "Low-Balance Casual Spenders"}, {"x": -2.032, "y": -1.001, "seg": "Low-Balance Casual Spenders"}, {"x": -1.392, "y": -1.211, "seg": "Low-Balance Casual Spenders"}, {"x": 0.422, "y": -0.488, "seg": "Low-Balance Casual Spenders"}, {"x": -0.222, "y": -1.538, "seg": "Low-Balance Casual Spenders"}, {"x": -0.057, "y": -1.173, "seg": "Low-Balance Casual Spenders"}, {"x": 0.574, "y": -1.553, "seg": "Low-Balance Casual Spenders"}, {"x": -1.082, "y": -1.018, "seg": "Low-Balance Casual Spenders"}, {"x": -1.165, "y": -0.387, "seg": "Low-Balance Casual Spenders"}, {"x": 0.831, "y": -0.953, "seg": "Low-Balance Casual Spenders"}, {"x": -1.879, "y": -1.139, "seg": "Low-Balance Casual Spenders"}, {"x": -0.151, "y": -0.668, "seg": "Low-Balance Casual Spenders"}, {"x": 1.113, "y": -0.492, "seg": "Low-Balance Casual Spenders"}, {"x": 0.539, "y": -1.636, "seg": "Low-Balance Casual Spenders"}, {"x": -0.037, "y": -2.191, "seg": "Low-Balance Casual Spenders"}, {"x": -1.349, "y": -1.363, "seg": "Low-Balance Casual Spenders"}, {"x": -1.503, "y": -1.592, "seg": "Low-Balance Casual Spenders"}, {"x": -1.612, "y": -1.104, "seg": "Low-Balance Casual Spenders"}, {"x": -1.698, "y": -1.666, "seg": "Low-Balance Casual Spenders"}, {"x": -0.989, "y": -1.736, "seg": "Low-Balance Casual Spenders"}, {"x": 0.375, "y": -2.371, "seg": "Low-Balance Casual Spenders"}, {"x": -0.951, "y": -1.627, "seg": "Low-Balance Casual Spenders"}, {"x": -0.614, "y": -1.658, "seg": "Low-Balance Casual Spenders"}, {"x": -1.33, "y": -1.811, "seg": "Low-Balance Casual Spenders"}, {"x": -1.114, "y": -1.389, "seg": "Low-Balance Casual Spenders"}, {"x": -1.283, "y": -0.979, "seg": "Low-Balance Casual Spenders"}, {"x": 1.422, "y": -1.857, "seg": "Low-Balance Casual Spenders"}, {"x": -1.031, "y": -1.366, "seg": "Low-Balance Casual Spenders"}, {"x": -1.462, "y": -1.645, "seg": "Low-Balance Casual Spenders"}, {"x": 1.768, "y": -1.626, "seg": "Low-Balance Casual Spenders"}, {"x": -1.561, "y": -0.672, "seg": "Low-Balance Casual Spenders"}, {"x": -0.911, "y": -1.236, "seg": "Low-Balance Casual Spenders"}, {"x": 1.755, "y": -2.321, "seg": "Low-Balance Casual Spenders"}, {"x": -1.251, "y": -1.411, "seg": "Low-Balance Casual Spenders"}, {"x": -0.335, "y": -1.821, "seg": "Low-Balance Casual Spenders"}, {"x": 0.785, "y": -1.198, "seg": "Low-Balance Casual Spenders"}, {"x": -0.298, "y": -0.277, "seg": "Low-Balance Casual Spenders"}, {"x": -0.203, "y": -0.635, "seg": "Low-Balance Casual Spenders"}, {"x": 2.052, "y": -1.125, "seg": "Low-Balance Casual Spenders"}, {"x": 1.787, "y": -1.401, "seg": "Low-Balance Casual Spenders"}, {"x": -0.031, "y": -1.278, "seg": "Low-Balance Casual Spenders"}, {"x": -1.905, "y": -0.954, "seg": "Low-Balance Casual Spenders"}, {"x": -1.586, "y": -1.377, "seg": "Low-Balance Casual Spenders"}, {"x": -1.808, "y": -1.222, "seg": "Low-Balance Casual Spenders"}, {"x": -1.39, "y": -1.317, "seg": "Low-Balance Casual Spenders"}, {"x": 0.653, "y": -1.259, "seg": "Low-Balance Casual Spenders"}, {"x": -0.814, "y": -1.595, "seg": "Low-Balance Casual Spenders"}, {"x": 0.52, "y": -1.263, "seg": "Low-Balance Casual Spenders"}, {"x": 0.305, "y": -1.065, "seg": "Low-Balance Casual Spenders"}, {"x": 1.769, "y": -0.61, "seg": "Low-Balance Casual Spenders"}, {"x": 0.194, "y": -0.827, "seg": "Low-Balance Casual Spenders"}, {"x": 1.578, "y": -0.916, "seg": "Low-Balance Casual Spenders"}, {"x": -0.315, "y": -2.029, "seg": "Low-Balance Casual Spenders"}, {"x": -1.629, "y": -1.102, "seg": "Low-Balance Casual Spenders"}, {"x": -1.048, "y": -1.112, "seg": "Low-Balance Casual Spenders"}, {"x": -1.804, "y": -0.757, "seg": "Low-Balance Casual Spenders"}, {"x": 0.898, "y": -1.503, "seg": "Low-Balance Casual Spenders"}, {"x": 1.023, "y": -2.319, "seg": "Low-Balance Casual Spenders"}, {"x": -0.818, "y": -0.826, "seg": "Low-Balance Casual Spenders"}, {"x": -0.787, "y": -0.934, "seg": "Low-Balance Casual Spenders"}, {"x": 0.071, "y": -0.88, "seg": "Low-Balance Casual Spenders"}, {"x": -1.328, "y": -1.795, "seg": "Low-Balance Casual Spenders"}, {"x": -1.337, "y": -1.267, "seg": "Low-Balance Casual Spenders"}, {"x": 1.761, "y": -1.086, "seg": "Low-Balance Casual Spenders"}, {"x": 0.474, "y": -0.877, "seg": "Low-Balance Casual Spenders"}, {"x": 1.494, "y": -2.056, "seg": "Low-Balance Casual Spenders"}, {"x": -0.273, "y": 0.672, "seg": "Low-Balance Casual Spenders"}, {"x": 1.928, "y": -2.081, "seg": "Low-Balance Casual Spenders"}, {"x": -0.699, "y": -0.707, "seg": "Low-Balance Casual Spenders"}, {"x": 0.354, "y": -2.073, "seg": "Low-Balance Casual Spenders"}, {"x": 1.523, "y": -0.947, "seg": "Low-Balance Casual Spenders"}, {"x": -1.09, "y": -1.125, "seg": "Low-Balance Casual Spenders"}, {"x": 1.254, "y": -1.89, "seg": "Low-Balance Casual Spenders"}, {"x": -1.529, "y": -1.324, "seg": "Low-Balance Casual Spenders"}, {"x": -0.174, "y": -1.04, "seg": "Low-Balance Casual Spenders"}, {"x": -0.624, "y": -1.055, "seg": "Low-Balance Casual Spenders"}, {"x": -0.08, "y": -1.079, "seg": "Low-Balance Casual Spenders"}, {"x": -2.028, "y": -0.822, "seg": "Low-Balance Casual Spenders"}, {"x": -0.58, "y": -1.558, "seg": "Low-Balance Casual Spenders"}, {"x": -0.067, "y": -1.15, "seg": "Low-Balance Casual Spenders"}, {"x": 0.679, "y": -1.742, "seg": "Low-Balance Casual Spenders"}, {"x": 0.975, "y": -1.309, "seg": "Low-Balance Casual Spenders"}, {"x": -1.268, "y": -1.706, "seg": "Low-Balance Casual Spenders"}, {"x": -0.313, "y": -1.067, "seg": "Low-Balance Casual Spenders"}, {"x": 0.892, "y": -1.123, "seg": "Low-Balance Casual Spenders"}, {"x": 0.201, "y": -1.256, "seg": "Low-Balance Casual Spenders"}, {"x": 0.028, "y": -1.372, "seg": "Low-Balance Casual Spenders"}, {"x": -1.195, "y": -1.659, "seg": "Low-Balance Casual Spenders"}, {"x": -1.637, "y": -1.111, "seg": "Low-Balance Casual Spenders"}, {"x": -0.301, "y": -1.526, "seg": "Low-Balance Casual Spenders"}, {"x": -1.036, "y": -0.196, "seg": "Low-Balance Casual Spenders"}, {"x": -1.733, "y": -1.834, "seg": "Low-Balance Casual Spenders"}, {"x": -1.867, "y": -0.559, "seg": "Low-Balance Casual Spenders"}, {"x": -0.754, "y": 0.044, "seg": "Low-Balance Casual Spenders"}, {"x": -1.41, "y": -0.931, "seg": "Low-Balance Casual Spenders"}, {"x": -1.399, "y": -1.581, "seg": "Low-Balance Casual Spenders"}, {"x": -1.616, "y": -1.035, "seg": "Low-Balance Casual Spenders"}, {"x": -0.832, "y": -1.944, "seg": "Low-Balance Casual Spenders"}, {"x": 0.631, "y": -1.793, "seg": "Low-Balance Casual Spenders"}, {"x": -1.042, "y": -2.019, "seg": "Low-Balance Casual Spenders"}, {"x": 0.111, "y": -1.39, "seg": "Low-Balance Casual Spenders"}, {"x": -1.042, "y": -0.785, "seg": "Low-Balance Casual Spenders"}, {"x": -0.01, "y": -1.403, "seg": "Low-Balance Casual Spenders"}, {"x": -1.889, "y": -0.819, "seg": "Low-Balance Casual Spenders"}, {"x": -0.219, "y": -1.135, "seg": "Low-Balance Casual Spenders"}, {"x": 1.586, "y": -1.691, "seg": "Low-Balance Casual Spenders"}, {"x": -0.568, "y": -1.446, "seg": "Low-Balance Casual Spenders"}, {"x": 1.956, "y": -2.102, "seg": "Low-Balance Casual Spenders"}, {"x": 2.043, "y": -0.015, "seg": "Low-Balance Casual Spenders"}, {"x": -0.461, "y": -0.08, "seg": "Low-Balance Casual Spenders"}, {"x": -1.138, "y": -1.077, "seg": "Low-Balance Casual Spenders"}, {"x": -0.773, "y": -1.539, "seg": "Low-Balance Casual Spenders"}, {"x": -0.497, "y": -0.599, "seg": "Low-Balance Casual Spenders"}, {"x": 1.324, "y": -0.989, "seg": "Low-Balance Casual Spenders"}, {"x": -1.764, "y": -1.171, "seg": "Low-Balance Casual Spenders"}, {"x": -1.611, "y": -1.902, "seg": "Low-Balance Casual Spenders"}, {"x": -1.005, "y": -0.933, "seg": "Low-Balance Casual Spenders"}, {"x": -0.461, "y": -0.849, "seg": "Low-Balance Casual Spenders"}, {"x": -0.69, "y": -1.046, "seg": "Low-Balance Casual Spenders"}, {"x": -1.169, "y": -1.118, "seg": "Low-Balance Casual Spenders"}, {"x": 2.262, "y": -0.838, "seg": "Low-Balance Casual Spenders"}, {"x": -0.129, "y": -0.621, "seg": "Low-Balance Casual Spenders"}, {"x": -1.096, "y": -1.113, "seg": "Low-Balance Casual Spenders"}, {"x": 0.044, "y": 0.79, "seg": "Low-Balance Casual Spenders"}, {"x": -0.568, "y": -0.796, "seg": "Low-Balance Casual Spenders"}, {"x": -1.145, "y": -1.792, "seg": "Low-Balance Casual Spenders"}, {"x": -0.925, "y": -1.298, "seg": "Low-Balance Casual Spenders"}, {"x": 0.602, "y": -2.043, "seg": "Low-Balance Casual Spenders"}, {"x": -1.072, "y": -1.623, "seg": "Low-Balance Casual Spenders"}, {"x": -1.491, "y": -0.643, "seg": "Low-Balance Casual Spenders"}, {"x": -0.23, "y": -2.115, "seg": "Low-Balance Casual Spenders"}, {"x": -1.536, "y": -1.756, "seg": "Low-Balance Casual Spenders"}, {"x": -0.653, "y": -1.497, "seg": "Low-Balance Casual Spenders"}, {"x": -0.621, "y": -1.762, "seg": "Low-Balance Casual Spenders"}, {"x": 0.466, "y": -1.806, "seg": "Low-Balance Casual Spenders"}, {"x": -0.416, "y": -1.302, "seg": "Low-Balance Casual Spenders"}, {"x": 1.95, "y": -0.324, "seg": "Low-Balance Casual Spenders"}, {"x": 0.448, "y": -1.513, "seg": "Low-Balance Casual Spenders"}, {"x": 1.394, "y": -0.811, "seg": "Low-Balance Casual Spenders"}, {"x": -1.67, "y": -1.176, "seg": "Low-Balance Casual Spenders"}, {"x": 0.325, "y": -1.055, "seg": "Low-Balance Casual Spenders"}, {"x": -1.336, "y": -1.876, "seg": "Low-Balance Casual Spenders"}, {"x": -0.84, "y": -1.345, "seg": "Low-Balance Casual Spenders"}, {"x": -1.757, "y": -1.101, "seg": "Low-Balance Casual Spenders"}, {"x": -0.944, "y": -1.197, "seg": "Low-Balance Casual Spenders"}, {"x": -1.527, "y": -1.112, "seg": "Low-Balance Casual Spenders"}, {"x": -0.838, "y": -2.035, "seg": "Low-Balance Casual Spenders"}, {"x": -1.413, "y": -0.956, "seg": "Low-Balance Casual Spenders"}, {"x": -1.733, "y": -1.075, "seg": "Low-Balance Casual Spenders"}, {"x": 0.84, "y": -0.861, "seg": "Low-Balance Casual Spenders"}, {"x": -1.138, "y": -1.618, "seg": "Low-Balance Casual Spenders"}, {"x": 1.635, "y": -1.563, "seg": "Low-Balance Casual Spenders"}, {"x": -1.002, "y": -1.333, "seg": "Low-Balance Casual Spenders"}, {"x": 0.035, "y": -2.203, "seg": "Low-Balance Casual Spenders"}, {"x": 0.425, "y": -2.205, "seg": "Low-Balance Casual Spenders"}, {"x": 1.073, "y": 0.727, "seg": "Low-Balance Casual Spenders"}, {"x": -0.873, "y": -1.541, "seg": "Low-Balance Casual Spenders"}, {"x": -1.76, "y": 0.081, "seg": "Low-Balance Casual Spenders"}, {"x": 1.898, "y": -2.362, "seg": "Low-Balance Casual Spenders"}, {"x": -0.968, "y": -0.488, "seg": "Low-Balance Casual Spenders"}, {"x": -1.505, "y": -1.14, "seg": "Low-Balance Casual Spenders"}, {"x": -0.283, "y": -0.77, "seg": "Low-Balance Casual Spenders"}, {"x": 1.826, "y": -0.679, "seg": "Low-Balance Casual Spenders"}, {"x": -0.565, "y": -1.941, "seg": "Low-Balance Casual Spenders"}, {"x": -0.048, "y": -0.653, "seg": "Low-Balance Casual Spenders"}, {"x": -1.78, "y": -0.509, "seg": "Low-Balance Casual Spenders"}, {"x": -1.412, "y": -1.671, "seg": "Low-Balance Casual Spenders"}, {"x": -1.933, "y": -0.869, "seg": "Low-Balance Casual Spenders"}, {"x": -0.318, "y": 0.332, "seg": "Low-Balance Casual Spenders"}, {"x": -1.548, "y": -1.266, "seg": "Low-Balance Casual Spenders"}, {"x": -0.688, "y": -2.125, "seg": "Low-Balance Casual Spenders"}, {"x": 0.079, "y": -1.519, "seg": "Low-Balance Casual Spenders"}, {"x": 2.716, "y": -2.511, "seg": "Low-Balance Casual Spenders"}, {"x": -0.821, "y": -0.242, "seg": "Low-Balance Casual Spenders"}, {"x": -1.431, "y": -1.231, "seg": "Low-Balance Casual Spenders"}, {"x": -0.31, "y": -2.03, "seg": "Low-Balance Casual Spenders"}, {"x": -1.655, "y": -1.09, "seg": "Low-Balance Casual Spenders"}, {"x": -1.11, "y": -1.495, "seg": "Low-Balance Casual Spenders"}, {"x": -0.651, "y": -0.457, "seg": "Low-Balance Casual Spenders"}, {"x": 0.138, "y": -2.123, "seg": "Low-Balance Casual Spenders"}, {"x": -1.196, "y": -0.402, "seg": "Low-Balance Casual Spenders"}, {"x": -1.247, "y": -0.977, "seg": "Low-Balance Casual Spenders"}, {"x": -0.331, "y": -1.48, "seg": "Low-Balance Casual Spenders"}, {"x": -0.662, "y": -0.778, "seg": "Low-Balance Casual Spenders"}, {"x": 3.063, "y": -0.689, "seg": "Low-Balance Casual Spenders"}, {"x": -1.342, "y": -1.239, "seg": "Low-Balance Casual Spenders"}, {"x": -0.277, "y": -1.483, "seg": "Low-Balance Casual Spenders"}, {"x": -1.149, "y": -0.92, "seg": "Low-Balance Casual Spenders"}, {"x": 0.544, "y": -1.776, "seg": "Low-Balance Casual Spenders"}, {"x": -1.112, "y": -1.022, "seg": "Low-Balance Casual Spenders"}, {"x": 0.622, "y": -1.642, "seg": "Low-Balance Casual Spenders"}, {"x": 0.966, "y": -1.622, "seg": "Low-Balance Casual Spenders"}, {"x": -1.499, "y": -1.159, "seg": "Low-Balance Casual Spenders"}, {"x": -1.469, "y": -1.348, "seg": "Low-Balance Casual Spenders"}, {"x": -1.772, "y": -1.214, "seg": "Low-Balance Casual Spenders"}, {"x": -0.832, "y": -1.452, "seg": "Low-Balance Casual Spenders"}, {"x": -0.834, "y": -1.704, "seg": "Low-Balance Casual Spenders"}, {"x": -1.112, "y": -1.336, "seg": "Low-Balance Casual Spenders"}, {"x": -1.674, "y": -1.91, "seg": "Low-Balance Casual Spenders"}, {"x": -1.889, "y": -0.168, "seg": "Low-Balance Casual Spenders"}, {"x": -1.356, "y": -1.008, "seg": "Low-Balance Casual Spenders"}, {"x": -1.596, "y": -0.73, "seg": "Low-Balance Casual Spenders"}, {"x": -1.51, "y": -1.135, "seg": "Low-Balance Casual Spenders"}, {"x": -1.563, "y": -0.897, "seg": "Low-Balance Casual Spenders"}, {"x": -1.177, "y": -0.938, "seg": "Low-Balance Casual Spenders"}, {"x": -0.508, "y": -1.676, "seg": "Low-Balance Casual Spenders"}, {"x": -0.643, "y": -0.942, "seg": "Low-Balance Casual Spenders"}, {"x": 0.456, "y": -1.391, "seg": "Low-Balance Casual Spenders"}, {"x": -1.124, "y": -0.334, "seg": "Low-Balance Casual Spenders"}, {"x": 0.19, "y": -0.173, "seg": "Low-Balance Casual Spenders"}, {"x": 0.763, "y": -1.392, "seg": "Low-Balance Casual Spenders"}, {"x": -1.616, "y": -1.367, "seg": "Low-Balance Casual Spenders"}, {"x": -0.836, "y": -1.796, "seg": "Low-Balance Casual Spenders"}, {"x": -1.412, "y": -1.222, "seg": "Low-Balance Casual Spenders"}, {"x": 0.668, "y": -1.955, "seg": "Low-Balance Casual Spenders"}, {"x": -1.468, "y": 0.108, "seg": "Low-Balance Casual Spenders"}, {"x": 0.764, "y": -2.063, "seg": "Low-Balance Casual Spenders"}, {"x": -0.553, "y": -0.961, "seg": "Low-Balance Casual Spenders"}, {"x": -1.053, "y": -1.449, "seg": "Low-Balance Casual Spenders"}, {"x": -1.786, "y": -1.168, "seg": "Low-Balance Casual Spenders"}, {"x": 2.232, "y": -0.872, "seg": "Low-Balance Casual Spenders"}, {"x": -1.285, "y": -1.494, "seg": "Low-Balance Casual Spenders"}, {"x": 0.414, "y": -2.22, "seg": "Low-Balance Casual Spenders"}, {"x": 0.859, "y": -1.515, "seg": "Low-Balance Casual Spenders"}, {"x": 2.267, "y": 6.297, "seg": "High-Risk Revolvers"}, {"x": -0.956, "y": 2.7, "seg": "High-Risk Revolvers"}, {"x": -0.527, "y": 3.307, "seg": "High-Risk Revolvers"}, {"x": -0.741, "y": 2.902, "seg": "High-Risk Revolvers"}, {"x": 4.675, "y": 6.56, "seg": "High-Risk Revolvers"}, {"x": 2.598, "y": 3.467, "seg": "High-Risk Revolvers"}, {"x": -1.101, "y": 2.551, "seg": "High-Risk Revolvers"}, {"x": 1.774, "y": 1.352, "seg": "High-Risk Revolvers"}, {"x": -0.632, "y": 2.243, "seg": "High-Risk Revolvers"}, {"x": 0.731, "y": 4.85, "seg": "High-Risk Revolvers"}, {"x": -0.043, "y": 2.528, "seg": "High-Risk Revolvers"}, {"x": -0.015, "y": 4.995, "seg": "High-Risk Revolvers"}, {"x": 1.637, "y": 5.538, "seg": "High-Risk Revolvers"}, {"x": 0.2, "y": 3.087, "seg": "High-Risk Revolvers"}, {"x": 2.584, "y": 4.812, "seg": "High-Risk Revolvers"}, {"x": -0.226, "y": 3.567, "seg": "High-Risk Revolvers"}, {"x": 2.963, "y": 2.673, "seg": "High-Risk Revolvers"}, {"x": 1.518, "y": 5.524, "seg": "High-Risk Revolvers"}, {"x": -0.7, "y": 4.001, "seg": "High-Risk Revolvers"}, {"x": -0.024, "y": 3.375, "seg": "High-Risk Revolvers"}, {"x": 1.007, "y": 3.601, "seg": "High-Risk Revolvers"}, {"x": 0.373, "y": 3.099, "seg": "High-Risk Revolvers"}, {"x": 0.096, "y": 4.49, "seg": "High-Risk Revolvers"}, {"x": -0.633, "y": 4.675, "seg": "High-Risk Revolvers"}, {"x": -0.709, "y": 2.89, "seg": "High-Risk Revolvers"}, {"x": 3.988, "y": 7.307, "seg": "High-Risk Revolvers"}, {"x": 2.27, "y": 1.231, "seg": "High-Risk Revolvers"}, {"x": -0.831, "y": 2.005, "seg": "High-Risk Revolvers"}, {"x": -0.552, "y": 2.866, "seg": "High-Risk Revolvers"}, {"x": 1.258, "y": 5.328, "seg": "High-Risk Revolvers"}, {"x": -1.251, "y": 2.031, "seg": "High-Risk Revolvers"}, {"x": 0.38, "y": 5.75, "seg": "High-Risk Revolvers"}, {"x": 2.387, "y": 6.2, "seg": "High-Risk Revolvers"}, {"x": -0.335, "y": 3.545, "seg": "High-Risk Revolvers"}, {"x": 3.86, "y": 4.651, "seg": "High-Risk Revolvers"}, {"x": 2.278, "y": 8.139, "seg": "High-Risk Revolvers"}, {"x": 6.909, "y": 8.223, "seg": "High-Risk Revolvers"}, {"x": 0.248, "y": 3.542, "seg": "High-Risk Revolvers"}, {"x": -0.126, "y": 4.218, "seg": "High-Risk Revolvers"}, {"x": -1.256, "y": 2.684, "seg": "High-Risk Revolvers"}, {"x": 0.675, "y": 3.221, "seg": "High-Risk Revolvers"}, {"x": 0.378, "y": 5.897, "seg": "High-Risk Revolvers"}, {"x": 1.988, "y": 5.065, "seg": "High-Risk Revolvers"}, {"x": 1.568, "y": 4.253, "seg": "High-Risk Revolvers"}, {"x": 1.635, "y": 2.766, "seg": "High-Risk Revolvers"}, {"x": -1.444, "y": 2.658, "seg": "High-Risk Revolvers"}, {"x": -0.28, "y": 2.716, "seg": "High-Risk Revolvers"}, {"x": -0.763, "y": 3.383, "seg": "High-Risk Revolvers"}, {"x": -0.592, "y": 4.089, "seg": "High-Risk Revolvers"}, {"x": -0.553, "y": 5.124, "seg": "High-Risk Revolvers"}, {"x": -0.774, "y": 2.853, "seg": "High-Risk Revolvers"}, {"x": -0.839, "y": 3.418, "seg": "High-Risk Revolvers"}, {"x": -0.052, "y": 5.512, "seg": "High-Risk Revolvers"}, {"x": -0.761, "y": 3.133, "seg": "High-Risk Revolvers"}, {"x": 1.336, "y": 3.487, "seg": "High-Risk Revolvers"}, {"x": -0.377, "y": 1.332, "seg": "High-Risk Revolvers"}, {"x": -0.185, "y": 3.51, "seg": "High-Risk Revolvers"}, {"x": -0.034, "y": 3.06, "seg": "High-Risk Revolvers"}, {"x": -0.959, "y": 3.717, "seg": "High-Risk Revolvers"}, {"x": 0.628, "y": 3.196, "seg": "High-Risk Revolvers"}, {"x": -1.762, "y": 2.883, "seg": "High-Risk Revolvers"}, {"x": -0.478, "y": 2.664, "seg": "High-Risk Revolvers"}, {"x": -0.053, "y": 6.478, "seg": "High-Risk Revolvers"}, {"x": -0.359, "y": 6.365, "seg": "High-Risk Revolvers"}, {"x": 0.397, "y": 3.071, "seg": "High-Risk Revolvers"}, {"x": 0.471, "y": 4.077, "seg": "High-Risk Revolvers"}, {"x": 0.669, "y": 2.222, "seg": "High-Risk Revolvers"}, {"x": 2.31, "y": 6.455, "seg": "High-Risk Revolvers"}, {"x": 1.52, "y": 3.596, "seg": "High-Risk Revolvers"}, {"x": -0.34, "y": 3.03, "seg": "High-Risk Revolvers"}, {"x": -0.765, "y": 2.182, "seg": "High-Risk Revolvers"}, {"x": 0.417, "y": 2.658, "seg": "High-Risk Revolvers"}, {"x": 0.058, "y": 5.39, "seg": "High-Risk Revolvers"}, {"x": -0.255, "y": 2.581, "seg": "High-Risk Revolvers"}, {"x": -0.513, "y": 3.115, "seg": "High-Risk Revolvers"}, {"x": -0.685, "y": 2.223, "seg": "High-Risk Revolvers"}, {"x": 4.371, "y": 3.426, "seg": "High-Risk Revolvers"}, {"x": -0.716, "y": 2.46, "seg": "High-Risk Revolvers"}, {"x": 3.244, "y": 1.534, "seg": "High-Risk Revolvers"}, {"x": -0.905, "y": 2.564, "seg": "High-Risk Revolvers"}, {"x": 2.336, "y": 1.515, "seg": "High-Risk Revolvers"}, {"x": -0.242, "y": 6.888, "seg": "High-Risk Revolvers"}, {"x": 0.786, "y": 3.969, "seg": "High-Risk Revolvers"}, {"x": 0.201, "y": 4.935, "seg": "High-Risk Revolvers"}, {"x": 1.869, "y": 1.487, "seg": "High-Risk Revolvers"}, {"x": 4.394, "y": 7.561, "seg": "High-Risk Revolvers"}, {"x": 2.817, "y": 3.411, "seg": "High-Risk Revolvers"}, {"x": -1.464, "y": 3.28, "seg": "High-Risk Revolvers"}, {"x": 0.219, "y": 2.582, "seg": "High-Risk Revolvers"}, {"x": -1.242, "y": 2.631, "seg": "High-Risk Revolvers"}, {"x": -0.852, "y": 4.628, "seg": "High-Risk Revolvers"}, {"x": -0.642, "y": 3.565, "seg": "High-Risk Revolvers"}, {"x": -0.537, "y": 1.887, "seg": "High-Risk Revolvers"}, {"x": -0.837, "y": 3.223, "seg": "High-Risk Revolvers"}, {"x": -1.521, "y": 1.965, "seg": "High-Risk Revolvers"}, {"x": -1.197, "y": 2.186, "seg": "High-Risk Revolvers"}, {"x": 0.59, "y": 3.882, "seg": "High-Risk Revolvers"}, {"x": 2.597, "y": 2.899, "seg": "High-Risk Revolvers"}, {"x": 1.838, "y": 2.721, "seg": "High-Risk Revolvers"}, {"x": -0.809, "y": 6.102, "seg": "High-Risk Revolvers"}, {"x": -1.036, "y": 4.211, "seg": "High-Risk Revolvers"}, {"x": -0.119, "y": 4.789, "seg": "High-Risk Revolvers"}, {"x": 1.471, "y": 4.251, "seg": "High-Risk Revolvers"}, {"x": 1.127, "y": 3.92, "seg": "High-Risk Revolvers"}, {"x": 2.5, "y": 1.634, "seg": "High-Risk Revolvers"}, {"x": 1.964, "y": 6.883, "seg": "High-Risk Revolvers"}, {"x": 1.746, "y": 4.271, "seg": "High-Risk Revolvers"}, {"x": -1.715, "y": 2.132, "seg": "High-Risk Revolvers"}, {"x": 1.019, "y": 4.866, "seg": "High-Risk Revolvers"}, {"x": 1.405, "y": 6.505, "seg": "High-Risk Revolvers"}, {"x": 0.89, "y": 1.225, "seg": "High-Risk Revolvers"}, {"x": 2.538, "y": 5.056, "seg": "High-Risk Revolvers"}, {"x": -0.988, "y": 3.455, "seg": "High-Risk Revolvers"}, {"x": 0.889, "y": 3.648, "seg": "High-Risk Revolvers"}, {"x": -0.163, "y": 4.312, "seg": "High-Risk Revolvers"}, {"x": -0.535, "y": 3.587, "seg": "High-Risk Revolvers"}, {"x": 0.951, "y": 6.965, "seg": "High-Risk Revolvers"}, {"x": 0.777, "y": 8.394, "seg": "High-Risk Revolvers"}, {"x": -0.413, "y": 1.67, "seg": "High-Risk Revolvers"}, {"x": -1.519, "y": 2.087, "seg": "High-Risk Revolvers"}, {"x": -1.282, "y": 2.602, "seg": "High-Risk Revolvers"}, {"x": 3.478, "y": 5.854, "seg": "High-Risk Revolvers"}, {"x": -0.898, "y": 3.491, "seg": "High-Risk Revolvers"}, {"x": 0.388, "y": 7.127, "seg": "High-Risk Revolvers"}, {"x": 0.946, "y": 5.869, "seg": "High-Risk Revolvers"}, {"x": 2.844, "y": 1.251, "seg": "High-Risk Revolvers"}, {"x": -0.482, "y": 1.414, "seg": "High-Risk Revolvers"}, {"x": 0.468, "y": 3.968, "seg": "High-Risk Revolvers"}, {"x": 0.099, "y": 5.382, "seg": "High-Risk Revolvers"}, {"x": -0.817, "y": 2.778, "seg": "High-Risk Revolvers"}, {"x": -1.469, "y": 3.574, "seg": "High-Risk Revolvers"}, {"x": -0.253, "y": 3.647, "seg": "High-Risk Revolvers"}, {"x": 1.466, "y": 4.686, "seg": "High-Risk Revolvers"}, {"x": -0.106, "y": 1.476, "seg": "High-Risk Revolvers"}, {"x": 0.295, "y": 5.677, "seg": "High-Risk Revolvers"}, {"x": -1.095, "y": 2.748, "seg": "High-Risk Revolvers"}, {"x": -0.473, "y": 2.066, "seg": "High-Risk Revolvers"}, {"x": 2.294, "y": 3.847, "seg": "High-Risk Revolvers"}, {"x": 2.215, "y": 5.651, "seg": "High-Risk Revolvers"}, {"x": -0.774, "y": 4.952, "seg": "High-Risk Revolvers"}, {"x": 0.541, "y": 2.272, "seg": "High-Risk Revolvers"}, {"x": -0.975, "y": 2.323, "seg": "High-Risk Revolvers"}, {"x": 4.283, "y": 2.029, "seg": "High-Risk Revolvers"}, {"x": 0.619, "y": 4.403, "seg": "High-Risk Revolvers"}, {"x": 1.255, "y": 4.555, "seg": "High-Risk Revolvers"}, {"x": 0.115, "y": 6.815, "seg": "High-Risk Revolvers"}, {"x": -0.576, "y": 3.048, "seg": "High-Risk Revolvers"}, {"x": 1.135, "y": 4.799, "seg": "High-Risk Revolvers"}, {"x": -0.928, "y": 1.989, "seg": "High-Risk Revolvers"}, {"x": -0.476, "y": 2.219, "seg": "High-Risk Revolvers"}, {"x": 0.741, "y": 5.355, "seg": "High-Risk Revolvers"}, {"x": 0.287, "y": 4.558, "seg": "High-Risk Revolvers"}, {"x": 1.758, "y": 2.953, "seg": "High-Risk Revolvers"}, {"x": 4.397, "y": 3.056, "seg": "High-Risk Revolvers"}, {"x": -0.122, "y": 2.807, "seg": "High-Risk Revolvers"}, {"x": 2.536, "y": 4.901, "seg": "High-Risk Revolvers"}, {"x": 0.573, "y": 2.594, "seg": "High-Risk Revolvers"}, {"x": 0.275, "y": 7.373, "seg": "High-Risk Revolvers"}, {"x": 1.208, "y": 4.518, "seg": "High-Risk Revolvers"}, {"x": -0.634, "y": 3.331, "seg": "High-Risk Revolvers"}, {"x": 2.847, "y": 1.525, "seg": "High-Risk Revolvers"}, {"x": 1.528, "y": 1.022, "seg": "High-Risk Revolvers"}, {"x": 0.102, "y": 3.85, "seg": "High-Risk Revolvers"}, {"x": -0.17, "y": 2.163, "seg": "High-Risk Revolvers"}, {"x": -0.04, "y": 5.899, "seg": "High-Risk Revolvers"}, {"x": -0.37, "y": 1.764, "seg": "High-Risk Revolvers"}, {"x": -0.215, "y": 3.422, "seg": "High-Risk Revolvers"}, {"x": -0.064, "y": 3.218, "seg": "High-Risk Revolvers"}, {"x": 0.908, "y": 1.776, "seg": "High-Risk Revolvers"}, {"x": 1.072, "y": 1.473, "seg": "High-Risk Revolvers"}, {"x": -0.245, "y": 2.781, "seg": "High-Risk Revolvers"}, {"x": -0.032, "y": 5.267, "seg": "High-Risk Revolvers"}, {"x": 1.129, "y": 3.881, "seg": "High-Risk Revolvers"}, {"x": 2.668, "y": 4.343, "seg": "High-Risk Revolvers"}, {"x": -0.204, "y": 5.087, "seg": "High-Risk Revolvers"}, {"x": 1.544, "y": 5.388, "seg": "High-Risk Revolvers"}, {"x": 0.952, "y": 3.397, "seg": "High-Risk Revolvers"}, {"x": 3.184, "y": 2.993, "seg": "High-Risk Revolvers"}, {"x": -0.312, "y": 5.483, "seg": "High-Risk Revolvers"}, {"x": -1.448, "y": 3.107, "seg": "High-Risk Revolvers"}, {"x": -0.847, "y": 2.426, "seg": "High-Risk Revolvers"}, {"x": 0.461, "y": 3.981, "seg": "High-Risk Revolvers"}, {"x": 4.261, "y": 8.827, "seg": "High-Risk Revolvers"}, {"x": -0.621, "y": 3.554, "seg": "High-Risk Revolvers"}, {"x": 3.514, "y": 8.574, "seg": "High-Risk Revolvers"}, {"x": 0.983, "y": 1.932, "seg": "High-Risk Revolvers"}, {"x": 0.735, "y": 5.563, "seg": "High-Risk Revolvers"}, {"x": -0.559, "y": 4.19, "seg": "High-Risk Revolvers"}, {"x": 0.377, "y": 4.201, "seg": "High-Risk Revolvers"}, {"x": 1.368, "y": 4.437, "seg": "High-Risk Revolvers"}, {"x": 3.793, "y": 7.635, "seg": "High-Risk Revolvers"}, {"x": 3.795, "y": 2.955, "seg": "High-Risk Revolvers"}, {"x": 0.822, "y": 3.331, "seg": "High-Risk Revolvers"}, {"x": -0.379, "y": 3.407, "seg": "High-Risk Revolvers"}, {"x": -0.887, "y": 2.133, "seg": "High-Risk Revolvers"}, {"x": 1.236, "y": 3.438, "seg": "High-Risk Revolvers"}, {"x": 0.736, "y": 8.451, "seg": "High-Risk Revolvers"}, {"x": 0.606, "y": 4.097, "seg": "High-Risk Revolvers"}, {"x": -0.142, "y": 3.321, "seg": "High-Risk Revolvers"}, {"x": 4.243, "y": 3.789, "seg": "High-Risk Revolvers"}, {"x": 1.053, "y": 6.066, "seg": "High-Risk Revolvers"}, {"x": 1.678, "y": 3.625, "seg": "High-Risk Revolvers"}, {"x": 2.214, "y": 3.627, "seg": "High-Risk Revolvers"}, {"x": 0.201, "y": 13.715, "seg": "High-Risk Revolvers"}, {"x": -0.356, "y": 2.065, "seg": "High-Risk Revolvers"}, {"x": 3.391, "y": 4.62, "seg": "High-Risk Revolvers"}, {"x": 5.761, "y": 4.16, "seg": "High-Risk Revolvers"}, {"x": 0.709, "y": 3.542, "seg": "High-Risk Revolvers"}, {"x": 1.82, "y": 4.344, "seg": "High-Risk Revolvers"}, {"x": 0.867, "y": 1.247, "seg": "High-Risk Revolvers"}, {"x": 2.097, "y": 5.117, "seg": "High-Risk Revolvers"}, {"x": 1.094, "y": 7.656, "seg": "High-Risk Revolvers"}, {"x": 1.642, "y": 2.802, "seg": "High-Risk Revolvers"}, {"x": 1.529, "y": 4.242, "seg": "High-Risk Revolvers"}, {"x": 1.038, "y": 0.515, "seg": "Moderate Utilizers"}, {"x": -0.606, "y": 2.834, "seg": "Moderate Utilizers"}, {"x": -1.833, "y": 1.618, "seg": "Moderate Utilizers"}, {"x": -0.724, "y": -0.423, "seg": "Moderate Utilizers"}, {"x": -1.888, "y": 0.032, "seg": "Moderate Utilizers"}, {"x": -0.385, "y": 0.753, "seg": "Moderate Utilizers"}, {"x": -1.273, "y": -0.073, "seg": "Moderate Utilizers"}, {"x": -1.888, "y": 0.068, "seg": "Moderate Utilizers"}, {"x": -1.824, "y": -0.386, "seg": "Moderate Utilizers"}, {"x": -0.867, "y": 2.163, "seg": "Moderate Utilizers"}, {"x": -1.065, "y": -0.827, "seg": "Moderate Utilizers"}, {"x": 1.402, "y": 2.37, "seg": "Moderate Utilizers"}, {"x": -1.148, "y": 2.132, "seg": "Moderate Utilizers"}, {"x": -1.219, "y": -0.206, "seg": "Moderate Utilizers"}, {"x": -1.814, "y": 0.368, "seg": "Moderate Utilizers"}, {"x": 0.495, "y": 0.819, "seg": "Moderate Utilizers"}, {"x": -1.207, "y": 0.586, "seg": "Moderate Utilizers"}, {"x": 0.222, "y": -0.021, "seg": "Moderate Utilizers"}, {"x": -0.786, "y": -0.178, "seg": "Moderate Utilizers"}, {"x": -0.682, "y": 0.261, "seg": "Moderate Utilizers"}, {"x": -0.59, "y": 1.465, "seg": "Moderate Utilizers"}, {"x": -1.937, "y": 0.028, "seg": "Moderate Utilizers"}, {"x": 0.701, "y": 0.303, "seg": "Moderate Utilizers"}, {"x": -1.145, "y": -0.077, "seg": "Moderate Utilizers"}, {"x": 0.638, "y": 0.124, "seg": "Moderate Utilizers"}, {"x": -0.89, "y": 1.929, "seg": "Moderate Utilizers"}, {"x": 1.33, "y": 0.737, "seg": "Moderate Utilizers"}, {"x": -0.999, "y": 0.231, "seg": "Moderate Utilizers"}, {"x": -1.108, "y": -0.418, "seg": "Moderate Utilizers"}, {"x": -0.324, "y": -0.776, "seg": "Moderate Utilizers"}, {"x": -0.75, "y": -0.306, "seg": "Moderate Utilizers"}, {"x": -0.74, "y": 0.393, "seg": "Moderate Utilizers"}, {"x": -0.633, "y": 0.233, "seg": "Moderate Utilizers"}, {"x": -1.883, "y": -0.033, "seg": "Moderate Utilizers"}, {"x": -0.619, "y": 1.694, "seg": "Moderate Utilizers"}, {"x": -1.859, "y": -0.156, "seg": "Moderate Utilizers"}, {"x": -1.312, "y": 1.225, "seg": "Moderate Utilizers"}, {"x": 1.004, "y": -0.005, "seg": "Moderate Utilizers"}, {"x": -0.495, "y": 1.236, "seg": "Moderate Utilizers"}, {"x": -1.88, "y": 0.153, "seg": "Moderate Utilizers"}, {"x": -2.06, "y": 1.077, "seg": "Moderate Utilizers"}, {"x": 0.962, "y": 0.815, "seg": "Moderate Utilizers"}, {"x": -0.341, "y": 1.433, "seg": "Moderate Utilizers"}, {"x": -1.563, "y": 0.484, "seg": "Moderate Utilizers"}, {"x": 0.19, "y": 0.354, "seg": "Moderate Utilizers"}, {"x": -1.296, "y": -0.299, "seg": "Moderate Utilizers"}, {"x": -0.986, "y": 1.649, "seg": "Moderate Utilizers"}, {"x": 1.001, "y": 2.27, "seg": "Moderate Utilizers"}, {"x": -1.743, "y": 0.659, "seg": "Moderate Utilizers"}, {"x": -1.376, "y": 0.879, "seg": "Moderate Utilizers"}, {"x": -0.87, "y": -0.079, "seg": "Moderate Utilizers"}, {"x": -1.416, "y": -0.109, "seg": "Moderate Utilizers"}, {"x": -1.876, "y": -0.12, "seg": "Moderate Utilizers"}, {"x": -1.594, "y": 0.687, "seg": "Moderate Utilizers"}, {"x": -1.301, "y": -0.05, "seg": "Moderate Utilizers"}, {"x": -0.417, "y": 1.863, "seg": "Moderate Utilizers"}, {"x": -1.85, "y": 0.189, "seg": "Moderate Utilizers"}, {"x": -0.968, "y": 0.621, "seg": "Moderate Utilizers"}, {"x": -1.427, "y": 0.42, "seg": "Moderate Utilizers"}, {"x": -0.332, "y": 0.214, "seg": "Moderate Utilizers"}, {"x": 0.867, "y": 1.296, "seg": "Moderate Utilizers"}, {"x": -1.002, "y": 0.923, "seg": "Moderate Utilizers"}, {"x": -0.611, "y": 1.885, "seg": "Moderate Utilizers"}, {"x": -1.845, "y": 0.315, "seg": "Moderate Utilizers"}, {"x": -1.3, "y": 0.035, "seg": "Moderate Utilizers"}, {"x": -1.363, "y": 0.594, "seg": "Moderate Utilizers"}, {"x": -0.411, "y": 0.203, "seg": "Moderate Utilizers"}, {"x": -0.521, "y": -0.445, "seg": "Moderate Utilizers"}, {"x": -1.3, "y": 1.488, "seg": "Moderate Utilizers"}, {"x": 0.177, "y": 0.225, "seg": "Moderate Utilizers"}, {"x": 1.132, "y": -0.632, "seg": "Moderate Utilizers"}, {"x": -1.264, "y": 1.34, "seg": "Moderate Utilizers"}, {"x": -1.825, "y": 2.069, "seg": "Moderate Utilizers"}, {"x": 0.223, "y": 1.824, "seg": "Moderate Utilizers"}, {"x": -0.492, "y": 1.21, "seg": "Moderate Utilizers"}, {"x": -1.533, "y": 1.093, "seg": "Moderate Utilizers"}, {"x": -1.416, "y": 1.341, "seg": "Moderate Utilizers"}, {"x": -1.933, "y": 0.194, "seg": "Moderate Utilizers"}, {"x": -1.19, "y": 2.251, "seg": "Moderate Utilizers"}, {"x": -1.577, "y": 0.725, "seg": "Moderate Utilizers"}, {"x": -1.388, "y": 1.307, "seg": "Moderate Utilizers"}, {"x": -0.891, "y": 0.057, "seg": "Moderate Utilizers"}, {"x": -0.982, "y": 1.383, "seg": "Moderate Utilizers"}, {"x": -0.663, "y": 0.03, "seg": "Moderate Utilizers"}, {"x": -1.877, "y": 0.102, "seg": "Moderate Utilizers"}, {"x": -1.936, "y": 0.079, "seg": "Moderate Utilizers"}, {"x": -1.844, "y": 0.12, "seg": "Moderate Utilizers"}, {"x": -1.161, "y": 1.223, "seg": "Moderate Utilizers"}, {"x": -1.521, "y": 1.411, "seg": "Moderate Utilizers"}, {"x": -1.459, "y": -0.244, "seg": "Moderate Utilizers"}, {"x": -0.98, "y": 2.442, "seg": "Moderate Utilizers"}, {"x": -1.188, "y": -0.081, "seg": "Moderate Utilizers"}, {"x": -1.24, "y": -0.16, "seg": "Moderate Utilizers"}, {"x": -1.558, "y": -0.027, "seg": "Moderate Utilizers"}, {"x": -0.065, "y": 1.768, "seg": "Moderate Utilizers"}, {"x": -1.024, "y": 0.455, "seg": "Moderate Utilizers"}, {"x": 1.499, "y": 1.358, "seg": "Moderate Utilizers"}, {"x": -0.823, "y": -0.45, "seg": "Moderate Utilizers"}, {"x": -0.092, "y": 2.323, "seg": "Moderate Utilizers"}, {"x": -1.694, "y": 0.714, "seg": "Moderate Utilizers"}, {"x": -1.398, "y": 1.532, "seg": "Moderate Utilizers"}, {"x": 1.856, "y": 0.56, "seg": "Moderate Utilizers"}, {"x": -1.74, "y": 0.192, "seg": "Moderate Utilizers"}, {"x": -0.152, "y": 1.725, "seg": "Moderate Utilizers"}, {"x": -0.96, "y": 0.606, "seg": "Moderate Utilizers"}, {"x": -1.344, "y": -0.164, "seg": "Moderate Utilizers"}, {"x": -1.085, "y": 0.542, "seg": "Moderate Utilizers"}, {"x": -2.06, "y": -0.235, "seg": "Moderate Utilizers"}, {"x": -1.324, "y": -0.06, "seg": "Moderate Utilizers"}, {"x": -1.186, "y": -0.348, "seg": "Moderate Utilizers"}, {"x": 0.196, "y": 2.108, "seg": "Moderate Utilizers"}, {"x": 0.224, "y": 2.087, "seg": "Moderate Utilizers"}, {"x": -1.067, "y": -0.063, "seg": "Moderate Utilizers"}, {"x": -0.397, "y": 1.313, "seg": "Moderate Utilizers"}, {"x": -0.602, "y": 1.829, "seg": "Moderate Utilizers"}, {"x": -1.445, "y": 0.581, "seg": "Moderate Utilizers"}, {"x": -0.982, "y": 0.961, "seg": "Moderate Utilizers"}, {"x": -1.129, "y": 1.649, "seg": "Moderate Utilizers"}, {"x": -1.607, "y": 0.001, "seg": "Moderate Utilizers"}, {"x": -0.076, "y": -0.644, "seg": "Moderate Utilizers"}, {"x": 1.521, "y": 0.03, "seg": "Moderate Utilizers"}, {"x": -1.04, "y": -0.662, "seg": "Moderate Utilizers"}, {"x": -0.816, "y": -0.322, "seg": "Moderate Utilizers"}, {"x": -1.442, "y": 1.177, "seg": "Moderate Utilizers"}, {"x": -1.75, "y": 0.192, "seg": "Moderate Utilizers"}, {"x": -1.248, "y": 0.896, "seg": "Moderate Utilizers"}, {"x": -1.525, "y": -0.028, "seg": "Moderate Utilizers"}, {"x": -1.732, "y": 0.52, "seg": "Moderate Utilizers"}, {"x": -1.586, "y": 0.663, "seg": "Moderate Utilizers"}, {"x": -1.811, "y": 0.208, "seg": "Moderate Utilizers"}, {"x": -1.538, "y": 0.675, "seg": "Moderate Utilizers"}, {"x": -0.843, "y": 0.983, "seg": "Moderate Utilizers"}, {"x": -1.677, "y": 1.365, "seg": "Moderate Utilizers"}, {"x": -1.46, "y": 2.216, "seg": "Moderate Utilizers"}, {"x": -1.471, "y": -0.139, "seg": "Moderate Utilizers"}, {"x": 1.906, "y": -0.028, "seg": "Moderate Utilizers"}, {"x": -0.729, "y": -0.151, "seg": "Moderate Utilizers"}, {"x": -1.421, "y": -0.589, "seg": "Moderate Utilizers"}, {"x": -1.781, "y": 0.455, "seg": "Moderate Utilizers"}, {"x": -1.537, "y": 0.572, "seg": "Moderate Utilizers"}, {"x": -1.752, "y": 1.48, "seg": "Moderate Utilizers"}, {"x": -1.015, "y": -0.103, "seg": "Moderate Utilizers"}, {"x": -0.76, "y": 1.27, "seg": "Moderate Utilizers"}, {"x": -1.318, "y": 0.585, "seg": "Moderate Utilizers"}, {"x": -1.565, "y": 0.725, "seg": "Moderate Utilizers"}, {"x": -0.555, "y": 2.111, "seg": "Moderate Utilizers"}, {"x": -2.153, "y": 0.062, "seg": "Moderate Utilizers"}, {"x": -1.113, "y": 0.552, "seg": "Moderate Utilizers"}, {"x": -0.88, "y": 0.444, "seg": "Moderate Utilizers"}, {"x": -0.919, "y": 1.305, "seg": "Moderate Utilizers"}, {"x": -1.167, "y": -0.407, "seg": "Moderate Utilizers"}, {"x": -1.568, "y": 0.108, "seg": "Moderate Utilizers"}, {"x": -1.491, "y": -0.162, "seg": "Moderate Utilizers"}, {"x": -1.861, "y": 0.119, "seg": "Moderate Utilizers"}, {"x": -1.536, "y": 1.237, "seg": "Moderate Utilizers"}, {"x": -1.08, "y": 0.051, "seg": "Moderate Utilizers"}, {"x": -1.189, "y": -0.117, "seg": "Moderate Utilizers"}, {"x": 0.459, "y": 0.843, "seg": "Moderate Utilizers"}, {"x": -0.017, "y": -0.433, "seg": "Moderate Utilizers"}, {"x": -0.174, "y": 0.581, "seg": "Moderate Utilizers"}, {"x": -1.259, "y": -0.455, "seg": "Moderate Utilizers"}, {"x": -1.939, "y": 1.454, "seg": "Moderate Utilizers"}, {"x": -1.295, "y": 0.014, "seg": "Moderate Utilizers"}, {"x": 0.825, "y": 0.039, "seg": "Moderate Utilizers"}, {"x": -1.763, "y": 0.327, "seg": "Moderate Utilizers"}, {"x": -1.33, "y": 0.247, "seg": "Moderate Utilizers"}, {"x": 0.249, "y": 0.498, "seg": "Moderate Utilizers"}, {"x": -1.025, "y": 2.8, "seg": "Moderate Utilizers"}, {"x": -2.005, "y": 0.178, "seg": "Moderate Utilizers"}, {"x": -0.677, "y": 0.329, "seg": "Moderate Utilizers"}, {"x": -1.841, "y": -0.441, "seg": "Moderate Utilizers"}, {"x": -1.654, "y": -0.369, "seg": "Moderate Utilizers"}, {"x": -0.444, "y": 2.351, "seg": "Moderate Utilizers"}, {"x": -1.666, "y": 0.355, "seg": "Moderate Utilizers"}, {"x": 0.775, "y": 1.122, "seg": "Moderate Utilizers"}, {"x": -1.632, "y": 0.24, "seg": "Moderate Utilizers"}, {"x": -0.485, "y": 2.827, "seg": "Moderate Utilizers"}, {"x": 1.684, "y": -0.921, "seg": "Moderate Utilizers"}, {"x": -1.313, "y": 1.158, "seg": "Moderate Utilizers"}, {"x": -1.757, "y": 0.375, "seg": "Moderate Utilizers"}, {"x": -1.877, "y": 0.275, "seg": "Moderate Utilizers"}, {"x": -0.459, "y": -0.705, "seg": "Moderate Utilizers"}, {"x": -1.005, "y": 0.329, "seg": "Moderate Utilizers"}, {"x": -0.339, "y": 0.215, "seg": "Moderate Utilizers"}, {"x": -1.322, "y": -0.552, "seg": "Moderate Utilizers"}, {"x": -0.427, "y": 0.646, "seg": "Moderate Utilizers"}, {"x": -1.827, "y": 0.475, "seg": "Moderate Utilizers"}, {"x": -0.659, "y": -0.192, "seg": "Moderate Utilizers"}, {"x": -0.413, "y": 0.784, "seg": "Moderate Utilizers"}, {"x": -0.921, "y": 1.916, "seg": "Moderate Utilizers"}, {"x": -0.956, "y": 0.17, "seg": "Moderate Utilizers"}, {"x": -0.458, "y": -0.443, "seg": "Moderate Utilizers"}, {"x": -1.228, "y": 1.427, "seg": "Moderate Utilizers"}, {"x": -1.124, "y": 0.619, "seg": "Moderate Utilizers"}, {"x": -1.801, "y": 0.252, "seg": "Moderate Utilizers"}, {"x": -1.529, "y": 2.059, "seg": "Moderate Utilizers"}, {"x": -0.712, "y": 0.315, "seg": "Moderate Utilizers"}, {"x": 1.672, "y": -0.15, "seg": "Moderate Utilizers"}, {"x": -1.503, "y": 1.222, "seg": "Moderate Utilizers"}, {"x": -0.158, "y": 1.236, "seg": "Moderate Utilizers"}, {"x": -1.993, "y": -0.023, "seg": "Moderate Utilizers"}, {"x": -1.035, "y": 0.217, "seg": "Moderate Utilizers"}, {"x": -1.04, "y": 0.826, "seg": "Moderate Utilizers"}, {"x": -1.618, "y": 0.545, "seg": "Moderate Utilizers"}, {"x": 1.332, "y": 2.43, "seg": "Moderate Utilizers"}, {"x": -1.898, "y": -0.08, "seg": "Moderate Utilizers"}, {"x": -1.736, "y": 0.263, "seg": "Moderate Utilizers"}, {"x": -1.42, "y": -0.11, "seg": "Moderate Utilizers"}, {"x": -1.224, "y": 0.259, "seg": "Moderate Utilizers"}, {"x": -1.638, "y": 1.063, "seg": "Moderate Utilizers"}, {"x": -0.673, "y": -0.253, "seg": "Moderate Utilizers"}, {"x": -0.751, "y": 2.261, "seg": "Moderate Utilizers"}, {"x": -0.159, "y": 0.759, "seg": "Moderate Utilizers"}, {"x": -1.341, "y": -0.111, "seg": "Moderate Utilizers"}, {"x": 0.649, "y": 2.373, "seg": "Moderate Utilizers"}, {"x": -1.013, "y": -0.152, "seg": "Moderate Utilizers"}, {"x": -0.8, "y": 2.301, "seg": "Moderate Utilizers"}, {"x": -0.134, "y": -0.258, "seg": "Moderate Utilizers"}, {"x": -1.38, "y": -0.286, "seg": "Moderate Utilizers"}, {"x": -1.864, "y": 0.18, "seg": "Moderate Utilizers"}, {"x": -1.448, "y": 1.271, "seg": "Moderate Utilizers"}, {"x": -0.367, "y": 0.694, "seg": "Moderate Utilizers"}, {"x": -1.224, "y": -0.359, "seg": "Moderate Utilizers"}, {"x": -1.217, "y": 0.09, "seg": "Moderate Utilizers"}, {"x": -1.689, "y": 0.168, "seg": "Moderate Utilizers"}, {"x": -0.851, "y": 2.04, "seg": "Moderate Utilizers"}, {"x": -0.801, "y": 2.211, "seg": "Moderate Utilizers"}, {"x": -1.123, "y": -0.439, "seg": "Moderate Utilizers"}, {"x": -1.788, "y": 0.348, "seg": "Moderate Utilizers"}, {"x": -0.474, "y": 1.599, "seg": "Moderate Utilizers"}, {"x": -1.092, "y": 0.604, "seg": "Moderate Utilizers"}, {"x": -1.271, "y": -0.036, "seg": "Moderate Utilizers"}, {"x": 0.726, "y": 0.779, "seg": "Moderate Utilizers"}, {"x": 0.506, "y": 1.725, "seg": "Moderate Utilizers"}, {"x": -1.186, "y": -0.198, "seg": "Moderate Utilizers"}, {"x": 1.549, "y": 0.113, "seg": "Moderate Utilizers"}, {"x": -0.952, "y": 2.366, "seg": "Moderate Utilizers"}, {"x": -1.724, "y": 0.17, "seg": "Moderate Utilizers"}, {"x": -1.945, "y": -0.123, "seg": "Moderate Utilizers"}, {"x": -1.303, "y": 0.779, "seg": "Moderate Utilizers"}, {"x": -1.777, "y": -0.206, "seg": "Moderate Utilizers"}, {"x": -0.654, "y": 0.147, "seg": "Moderate Utilizers"}, {"x": -1.71, "y": 0.268, "seg": "Moderate Utilizers"}, {"x": -1.605, "y": 1.036, "seg": "Moderate Utilizers"}, {"x": -1.553, "y": 1.046, "seg": "Moderate Utilizers"}, {"x": -0.089, "y": -0.45, "seg": "Moderate Utilizers"}, {"x": -1.759, "y": 0.319, "seg": "Moderate Utilizers"}, {"x": -1.39, "y": 2.747, "seg": "Moderate Utilizers"}, {"x": -0.191, "y": 1.379, "seg": "Moderate Utilizers"}, {"x": -0.71, "y": 2.291, "seg": "Moderate Utilizers"}, {"x": -1.608, "y": 0.553, "seg": "Moderate Utilizers"}, {"x": -2.009, "y": 0.128, "seg": "Moderate Utilizers"}, {"x": -1.551, "y": -0.661, "seg": "Moderate Utilizers"}, {"x": -0.296, "y": 0.446, "seg": "Moderate Utilizers"}, {"x": -0.939, "y": -0.753, "seg": "Moderate Utilizers"}, {"x": -0.284, "y": 1.624, "seg": "Moderate Utilizers"}, {"x": 1.437, "y": 1.375, "seg": "Moderate Utilizers"}, {"x": 0.55, "y": 1.04, "seg": "Moderate Utilizers"}, {"x": 2.431, "y": 0.855, "seg": "Moderate Utilizers"}, {"x": -0.011, "y": 2.137, "seg": "Moderate Utilizers"}, {"x": -1.27, "y": 0.758, "seg": "Moderate Utilizers"}, {"x": 0.696, "y": -0.47, "seg": "Moderate Utilizers"}, {"x": -0.42, "y": 1.024, "seg": "Moderate Utilizers"}, {"x": -0.974, "y": -0.506, "seg": "Moderate Utilizers"}, {"x": -1.699, "y": -0.291, "seg": "Moderate Utilizers"}, {"x": 0.019, "y": -0.049, "seg": "Moderate Utilizers"}, {"x": -1.332, "y": 0.093, "seg": "Moderate Utilizers"}, {"x": -0.548, "y": -0.044, "seg": "Moderate Utilizers"}, {"x": -1.653, "y": 0.211, "seg": "Moderate Utilizers"}, {"x": -0.025, "y": -0.219, "seg": "Moderate Utilizers"}, {"x": -1.811, "y": 0.901, "seg": "Moderate Utilizers"}, {"x": -1.069, "y": -0.452, "seg": "Moderate Utilizers"}, {"x": -0.27, "y": -0.382, "seg": "Moderate Utilizers"}, {"x": -0.823, "y": -0.058, "seg": "Moderate Utilizers"}, {"x": -0.719, "y": 1.042, "seg": "Moderate Utilizers"}, {"x": 0.017, "y": 1.918, "seg": "Moderate Utilizers"}, {"x": -0.008, "y": 0.292, "seg": "Moderate Utilizers"}, {"x": -1.683, "y": 0.661, "seg": "Moderate Utilizers"}, {"x": -1.551, "y": 0.982, "seg": "Moderate Utilizers"}, {"x": 0.276, "y": 2.099, "seg": "Moderate Utilizers"}, {"x": 0.349, "y": 1.956, "seg": "Moderate Utilizers"}, {"x": 0.43, "y": 1.289, "seg": "Moderate Utilizers"}, {"x": -1.279, "y": 2.034, "seg": "Moderate Utilizers"}, {"x": 2.042, "y": 0.528, "seg": "Moderate Utilizers"}, {"x": 2.34, "y": 1.674, "seg": "Moderate Utilizers"}, {"x": -0.734, "y": 0.622, "seg": "Moderate Utilizers"}, {"x": -1.25, "y": 1.813, "seg": "Moderate Utilizers"}, {"x": 1.715, "y": -0.443, "seg": "Moderate Utilizers"}, {"x": -0.666, "y": -0.115, "seg": "Moderate Utilizers"}, {"x": -0.813, "y": 2.518, "seg": "Moderate Utilizers"}, {"x": -1.649, "y": 0.264, "seg": "Moderate Utilizers"}, {"x": -1.626, "y": -0.618, "seg": "Moderate Utilizers"}, {"x": -1.522, "y": 0.915, "seg": "Moderate Utilizers"}, {"x": -1.233, "y": 0.536, "seg": "Moderate Utilizers"}, {"x": 0.309, "y": 0.605, "seg": "Moderate Utilizers"}, {"x": -1.2, "y": -0.361, "seg": "Moderate Utilizers"}, {"x": -0.83, "y": 2.006, "seg": "Moderate Utilizers"}, {"x": 0.937, "y": 1.025, "seg": "Moderate Utilizers"}, {"x": 0.786, "y": 1.899, "seg": "Moderate Utilizers"}, {"x": -0.202, "y": 0.296, "seg": "Moderate Utilizers"}, {"x": -0.036, "y": 1.219, "seg": "Moderate Utilizers"}, {"x": -0.728, "y": 0.73, "seg": "Moderate Utilizers"}, {"x": -1.594, "y": 0.758, "seg": "Moderate Utilizers"}, {"x": 0.162, "y": 1.361, "seg": "Moderate Utilizers"}, {"x": -0.626, "y": 2.036, "seg": "Moderate Utilizers"}, {"x": -0.134, "y": 0.434, "seg": "Moderate Utilizers"}, {"x": -1.317, "y": 1.888, "seg": "Moderate Utilizers"}, {"x": -1.485, "y": -0.165, "seg": "Moderate Utilizers"}, {"x": -1.426, "y": 1.851, "seg": "Moderate Utilizers"}, {"x": -1.891, "y": 0.084, "seg": "Moderate Utilizers"}, {"x": -1.073, "y": -0.226, "seg": "Moderate Utilizers"}, {"x": -1.181, "y": 0.121, "seg": "Moderate Utilizers"}, {"x": 0.362, "y": 0.418, "seg": "Moderate Utilizers"}, {"x": -1.29, "y": 2.507, "seg": "Moderate Utilizers"}, {"x": -1.307, "y": 0.196, "seg": "Moderate Utilizers"}, {"x": -1.562, "y": -0.35, "seg": "Moderate Utilizers"}, {"x": 0.41, "y": 0.363, "seg": "Moderate Utilizers"}, {"x": -1.999, "y": -0.035, "seg": "Moderate Utilizers"}, {"x": -0.218, "y": 2.307, "seg": "Moderate Utilizers"}, {"x": -0.407, "y": 2.583, "seg": "Moderate Utilizers"}, {"x": -0.319, "y": 0.211, "seg": "Moderate Utilizers"}, {"x": -1.923, "y": -0.035, "seg": "Moderate Utilizers"}, {"x": -1.758, "y": 0.546, "seg": "Moderate Utilizers"}, {"x": -1.532, "y": 2.033, "seg": "Moderate Utilizers"}, {"x": -1.486, "y": 0.642, "seg": "Moderate Utilizers"}, {"x": -0.256, "y": 0.98, "seg": "Moderate Utilizers"}, {"x": 0.896, "y": 0.066, "seg": "Moderate Utilizers"}, {"x": -1.939, "y": 0.031, "seg": "Moderate Utilizers"}, {"x": -1.78, "y": 0.472, "seg": "Moderate Utilizers"}, {"x": -0.998, "y": -0.135, "seg": "Moderate Utilizers"}, {"x": -1.433, "y": 0.827, "seg": "Moderate Utilizers"}, {"x": -1.775, "y": 0.383, "seg": "Moderate Utilizers"}, {"x": -0.4, "y": 0.24, "seg": "Moderate Utilizers"}, {"x": -1.814, "y": 0.516, "seg": "Moderate Utilizers"}, {"x": -1.608, "y": 0.746, "seg": "Moderate Utilizers"}, {"x": 0.957, "y": 0.231, "seg": "Moderate Utilizers"}, {"x": -1.277, "y": 0.002, "seg": "Moderate Utilizers"}, {"x": -1.253, "y": 0.348, "seg": "Moderate Utilizers"}, {"x": -1.568, "y": 1.204, "seg": "Moderate Utilizers"}, {"x": -1.836, "y": 0.058, "seg": "Moderate Utilizers"}, {"x": -1.315, "y": -0.051, "seg": "Moderate Utilizers"}, {"x": -0.573, "y": -0.146, "seg": "Moderate Utilizers"}, {"x": -1.803, "y": 0.42, "seg": "Moderate Utilizers"}, {"x": -0.884, "y": 1.682, "seg": "Moderate Utilizers"}, {"x": -0.458, "y": 0.498, "seg": "Moderate Utilizers"}, {"x": -1.834, "y": 0.678, "seg": "Moderate Utilizers"}, {"x": -1.985, "y": -0.791, "seg": "Moderate Utilizers"}, {"x": -1.633, "y": 0.399, "seg": "Moderate Utilizers"}, {"x": -0.344, "y": 1.726, "seg": "Moderate Utilizers"}, {"x": -1.344, "y": 0.052, "seg": "Moderate Utilizers"}, {"x": -0.994, "y": -0.581, "seg": "Moderate Utilizers"}, {"x": -0.934, "y": -0.328, "seg": "Moderate Utilizers"}, {"x": 1.801, "y": 1.013, "seg": "Moderate Utilizers"}, {"x": -1.612, "y": -0.14, "seg": "Moderate Utilizers"}, {"x": 0.104, "y": 2.434, "seg": "Moderate Utilizers"}, {"x": -1.544, "y": -0.074, "seg": "Moderate Utilizers"}, {"x": -1.888, "y": 0.171, "seg": "Moderate Utilizers"}, {"x": -1.927, "y": -0.104, "seg": "Moderate Utilizers"}, {"x": -0.922, "y": -0.267, "seg": "Moderate Utilizers"}, {"x": 0.158, "y": 1.715, "seg": "Moderate Utilizers"}, {"x": -1.157, "y": 0.268, "seg": "Moderate Utilizers"}, {"x": -0.005, "y": 1.171, "seg": "Moderate Utilizers"}, {"x": -1.833, "y": 0.285, "seg": "Moderate Utilizers"}, {"x": 0.74, "y": 1.746, "seg": "Moderate Utilizers"}, {"x": -1.185, "y": 0.273, "seg": "Moderate Utilizers"}, {"x": -1.945, "y": 0.026, "seg": "Moderate Utilizers"}, {"x": -0.662, "y": -0.019, "seg": "Moderate Utilizers"}, {"x": -0.774, "y": 0.126, "seg": "Moderate Utilizers"}, {"x": -0.984, "y": 1.695, "seg": "Moderate Utilizers"}, {"x": -1.23, "y": -0.271, "seg": "Moderate Utilizers"}, {"x": -1.328, "y": 0.08, "seg": "Moderate Utilizers"}, {"x": -1.65, "y": 0.028, "seg": "Moderate Utilizers"}, {"x": -1.024, "y": -0.373, "seg": "Moderate Utilizers"}, {"x": -0.356, "y": -0.519, "seg": "Moderate Utilizers"}, {"x": -1.23, "y": 0.852, "seg": "Moderate Utilizers"}, {"x": -1.52, "y": 0.515, "seg": "Moderate Utilizers"}, {"x": -1.954, "y": 0.113, "seg": "Moderate Utilizers"}, {"x": -1.127, "y": -0.798, "seg": "Moderate Utilizers"}, {"x": -0.856, "y": 2.424, "seg": "Moderate Utilizers"}, {"x": -1.415, "y": -0.306, "seg": "Moderate Utilizers"}, {"x": -1.336, "y": 0.048, "seg": "Moderate Utilizers"}, {"x": -0.385, "y": -0.506, "seg": "Moderate Utilizers"}, {"x": -1.861, "y": 0.209, "seg": "Moderate Utilizers"}, {"x": 0.356, "y": 1.425, "seg": "Moderate Utilizers"}, {"x": -0.768, "y": 1.63, "seg": "Moderate Utilizers"}, {"x": 0.5, "y": -0.011, "seg": "Moderate Utilizers"}, {"x": 1.899, "y": 1.205, "seg": "Moderate Utilizers"}, {"x": -1.602, "y": 0.079, "seg": "Moderate Utilizers"}, {"x": -0.451, "y": 1.826, "seg": "Moderate Utilizers"}, {"x": -1.19, "y": 2.724, "seg": "Moderate Utilizers"}, {"x": -0.847, "y": -0.186, "seg": "Moderate Utilizers"}, {"x": -0.964, "y": -0.151, "seg": "Moderate Utilizers"}, {"x": -1.081, "y": 1.272, "seg": "Moderate Utilizers"}, {"x": 0.457, "y": 2.729, "seg": "Moderate Utilizers"}, {"x": -1.635, "y": 0.842, "seg": "Moderate Utilizers"}, {"x": -1.89, "y": -0.382, "seg": "Moderate Utilizers"}, {"x": -0.918, "y": 0.303, "seg": "Moderate Utilizers"}, {"x": -1.26, "y": -0.123, "seg": "Moderate Utilizers"}, {"x": -1.398, "y": -0.085, "seg": "Moderate Utilizers"}, {"x": -2.047, "y": 0.38, "seg": "Moderate Utilizers"}, {"x": -1.376, "y": 0.413, "seg": "Moderate Utilizers"}, {"x": -1.65, "y": 0.018, "seg": "Moderate Utilizers"}, {"x": -1.879, "y": 0.455, "seg": "Moderate Utilizers"}, {"x": 0.439, "y": -0.196, "seg": "Moderate Utilizers"}, {"x": -0.646, "y": -0.593, "seg": "Moderate Utilizers"}, {"x": -0.097, "y": 0.034, "seg": "Moderate Utilizers"}, {"x": -2.144, "y": 0.298, "seg": "Moderate Utilizers"}, {"x": -1.34, "y": 1.81, "seg": "Moderate Utilizers"}, {"x": 1.792, "y": 0.317, "seg": "Moderate Utilizers"}, {"x": -0.607, "y": 0.517, "seg": "Moderate Utilizers"}, {"x": -0.866, "y": 1.798, "seg": "Moderate Utilizers"}, {"x": -1.378, "y": 0.17, "seg": "Moderate Utilizers"}, {"x": 0.518, "y": 1.696, "seg": "Moderate Utilizers"}, {"x": -1.873, "y": 0.261, "seg": "Moderate Utilizers"}, {"x": -1.203, "y": 0.113, "seg": "Moderate Utilizers"}, {"x": -0.035, "y": 0.823, "seg": "Moderate Utilizers"}, {"x": -1.669, "y": 1.544, "seg": "Moderate Utilizers"}, {"x": -0.936, "y": 2.097, "seg": "Moderate Utilizers"}, {"x": -1.413, "y": -0.276, "seg": "Moderate Utilizers"}, {"x": -0.385, "y": 1.494, "seg": "Moderate Utilizers"}, {"x": -1.597, "y": 0.282, "seg": "Moderate Utilizers"}, {"x": -1.861, "y": 0.289, "seg": "Moderate Utilizers"}, {"x": -0.098, "y": 1.06, "seg": "Moderate Utilizers"}, {"x": 0.361, "y": 3.085, "seg": "Moderate Utilizers"}, {"x": -1.962, "y": -0.088, "seg": "Moderate Utilizers"}, {"x": -0.637, "y": 2.73, "seg": "Moderate Utilizers"}, {"x": -0.647, "y": 1.373, "seg": "Moderate Utilizers"}, {"x": 0.177, "y": 2.568, "seg": "Moderate Utilizers"}, {"x": -1.426, "y": -0.542, "seg": "Moderate Utilizers"}, {"x": -1.428, "y": 0.612, "seg": "Moderate Utilizers"}, {"x": -1.514, "y": 0.409, "seg": "Moderate Utilizers"}, {"x": -1.749, "y": 0.047, "seg": "Moderate Utilizers"}, {"x": -0.901, "y": 0.91, "seg": "Moderate Utilizers"}, {"x": -1.909, "y": -0.143, "seg": "Moderate Utilizers"}, {"x": -0.846, "y": 2.164, "seg": "Moderate Utilizers"}, {"x": -0.319, "y": 1.794, "seg": "Moderate Utilizers"}, {"x": 0.199, "y": 1.187, "seg": "Moderate Utilizers"}, {"x": 1.041, "y": 1.107, "seg": "Moderate Utilizers"}, {"x": 2.143, "y": -0.211, "seg": "Moderate Utilizers"}, {"x": 1.73, "y": -0.053, "seg": "Moderate Utilizers"}, {"x": -1.279, "y": 0.224, "seg": "Moderate Utilizers"}, {"x": -1.48, "y": 0.967, "seg": "Moderate Utilizers"}, {"x": -1.118, "y": 0.165, "seg": "Moderate Utilizers"}, {"x": -0.711, "y": -0.569, "seg": "Moderate Utilizers"}, {"x": -0.611, "y": -0.47, "seg": "Moderate Utilizers"}, {"x": -1.638, "y": 0.17, "seg": "Moderate Utilizers"}, {"x": -0.837, "y": 2.178, "seg": "Moderate Utilizers"}, {"x": -1.784, "y": 0.169, "seg": "Moderate Utilizers"}, {"x": -1.006, "y": 0.047, "seg": "Moderate Utilizers"}, {"x": -0.519, "y": 0.18, "seg": "Moderate Utilizers"}, {"x": -0.705, "y": 1.657, "seg": "Moderate Utilizers"}, {"x": -1.276, "y": 0.569, "seg": "Moderate Utilizers"}, {"x": -1.897, "y": -0.241, "seg": "Moderate Utilizers"}, {"x": -1.15, "y": 0.253, "seg": "Moderate Utilizers"}, {"x": -1.314, "y": 0.342, "seg": "Moderate Utilizers"}, {"x": -1.552, "y": 0.159, "seg": "Moderate Utilizers"}, {"x": -1.798, "y": 0.439, "seg": "Moderate Utilizers"}, {"x": -1.131, "y": 0.224, "seg": "Moderate Utilizers"}, {"x": 2.121, "y": 0.271, "seg": "Moderate Utilizers"}, {"x": -0.921, "y": 0.453, "seg": "Moderate Utilizers"}, {"x": -1.039, "y": 2.956, "seg": "Moderate Utilizers"}, {"x": -0.779, "y": 1.682, "seg": "Moderate Utilizers"}, {"x": -1.52, "y": 0.144, "seg": "Moderate Utilizers"}, {"x": -1.03, "y": 2.151, "seg": "Moderate Utilizers"}, {"x": -1.804, "y": 0.682, "seg": "Moderate Utilizers"}, {"x": -1.671, "y": 2.112, "seg": "Moderate Utilizers"}, {"x": -0.293, "y": 2.118, "seg": "Moderate Utilizers"}, {"x": -1.67, "y": 1.351, "seg": "Moderate Utilizers"}, {"x": -0.829, "y": 1.268, "seg": "Moderate Utilizers"}, {"x": 0.266, "y": 1.715, "seg": "Moderate Utilizers"}, {"x": -2.124, "y": 1.092, "seg": "Moderate Utilizers"}, {"x": -1.895, "y": 1.995, "seg": "Moderate Utilizers"}, {"x": -1.008, "y": 1.174, "seg": "Moderate Utilizers"}, {"x": -1.119, "y": -0.171, "seg": "Moderate Utilizers"}, {"x": -0.267, "y": 0.317, "seg": "Moderate Utilizers"}, {"x": -1.831, "y": -0.568, "seg": "Moderate Utilizers"}, {"x": -1.018, "y": 0.615, "seg": "Moderate Utilizers"}, {"x": -0.885, "y": 0.115, "seg": "Moderate Utilizers"}, {"x": -1.687, "y": 2.208, "seg": "Moderate Utilizers"}, {"x": -2.078, "y": 0.137, "seg": "Moderate Utilizers"}, {"x": -1.075, "y": 0.23, "seg": "Moderate Utilizers"}, {"x": -0.21, "y": 2.067, "seg": "Moderate Utilizers"}, {"x": -1.807, "y": 0.224, "seg": "Moderate Utilizers"}, {"x": -1.752, "y": 0.486, "seg": "Moderate Utilizers"}, {"x": 0.324, "y": 0.89, "seg": "Moderate Utilizers"}, {"x": -1.031, "y": -0.846, "seg": "Moderate Utilizers"}, {"x": 0.684, "y": 0.244, "seg": "Moderate Utilizers"}, {"x": -0.87, "y": 0.147, "seg": "Moderate Utilizers"}, {"x": -0.517, "y": 1.321, "seg": "Moderate Utilizers"}, {"x": -0.53, "y": -0.619, "seg": "Moderate Utilizers"}, {"x": 0.524, "y": 1.617, "seg": "Moderate Utilizers"}, {"x": -1.384, "y": 0.314, "seg": "Moderate Utilizers"}, {"x": -1.356, "y": 1.203, "seg": "Moderate Utilizers"}, {"x": 1.52, "y": 1.706, "seg": "Moderate Utilizers"}, {"x": -1.496, "y": 1.453, "seg": "Moderate Utilizers"}, {"x": -1.378, "y": -0.132, "seg": "Moderate Utilizers"}, {"x": -0.885, "y": 0.428, "seg": "Moderate Utilizers"}, {"x": -1.884, "y": -0.235, "seg": "Moderate Utilizers"}, {"x": -1.593, "y": -0.62, "seg": "Moderate Utilizers"}, {"x": -0.676, "y": -0.367, "seg": "Moderate Utilizers"}, {"x": -0.864, "y": 2.047, "seg": "Moderate Utilizers"}, {"x": -1.86, "y": 0.956, "seg": "Moderate Utilizers"}, {"x": 0.339, "y": 0.587, "seg": "Moderate Utilizers"}, {"x": 0.188, "y": -0.314, "seg": "Moderate Utilizers"}, {"x": -0.955, "y": -0.236, "seg": "Moderate Utilizers"}, {"x": -1.498, "y": 0.864, "seg": "Moderate Utilizers"}, {"x": -1.771, "y": 1.216, "seg": "Moderate Utilizers"}, {"x": -0.791, "y": 0.483, "seg": "Moderate Utilizers"}, {"x": -1.852, "y": 0.441, "seg": "Moderate Utilizers"}, {"x": -0.396, "y": 1.84, "seg": "Moderate Utilizers"}, {"x": -1.733, "y": -0.041, "seg": "Moderate Utilizers"}, {"x": -1.123, "y": 0.389, "seg": "Moderate Utilizers"}, {"x": -1.185, "y": 0.142, "seg": "Moderate Utilizers"}, {"x": -0.796, "y": 0.166, "seg": "Moderate Utilizers"}, {"x": -1.47, "y": 2.05, "seg": "Moderate Utilizers"}, {"x": 0.717, "y": 1.093, "seg": "Moderate Utilizers"}, {"x": 0.526, "y": 1.508, "seg": "Moderate Utilizers"}, {"x": -1.908, "y": -0.081, "seg": "Moderate Utilizers"}, {"x": -1.076, "y": -0.146, "seg": "Moderate Utilizers"}, {"x": -1.148, "y": 1.856, "seg": "Moderate Utilizers"}, {"x": 1.377, "y": 1.464, "seg": "Moderate Utilizers"}, {"x": 1.125, "y": 0.334, "seg": "Moderate Utilizers"}, {"x": 0.723, "y": 0.451, "seg": "Moderate Utilizers"}, {"x": -1.324, "y": 0.762, "seg": "Moderate Utilizers"}, {"x": -1.364, "y": 0.159, "seg": "Moderate Utilizers"}, {"x": -2.062, "y": -0.173, "seg": "Moderate Utilizers"}, {"x": -1.223, "y": -0.903, "seg": "Moderate Utilizers"}, {"x": -1.659, "y": 0.785, "seg": "Moderate Utilizers"}, {"x": -0.364, "y": 0.054, "seg": "Moderate Utilizers"}, {"x": 0.336, "y": 0.222, "seg": "Moderate Utilizers"}, {"x": 1.014, "y": 0.413, "seg": "Moderate Utilizers"}, {"x": -1.054, "y": 0.034, "seg": "Moderate Utilizers"}, {"x": -0.896, "y": 0.354, "seg": "Moderate Utilizers"}, {"x": -0.347, "y": -0.107, "seg": "Moderate Utilizers"}, {"x": -0.475, "y": 0.792, "seg": "Moderate Utilizers"}, {"x": -0.399, "y": -0.308, "seg": "Moderate Utilizers"}, {"x": -1.262, "y": 2.348, "seg": "Moderate Utilizers"}, {"x": -1.603, "y": 0.192, "seg": "Moderate Utilizers"}, {"x": -0.013, "y": 0.247, "seg": "Moderate Utilizers"}, {"x": -1.284, "y": -0.514, "seg": "Moderate Utilizers"}, {"x": -2.145, "y": 0.332, "seg": "Moderate Utilizers"}, {"x": -1.465, "y": 0.273, "seg": "Moderate Utilizers"}, {"x": -1.345, "y": 0.357, "seg": "Moderate Utilizers"}, {"x": -1.574, "y": 0.08, "seg": "Moderate Utilizers"}, {"x": -1.544, "y": -0.015, "seg": "Moderate Utilizers"}, {"x": -0.694, "y": 0.532, "seg": "Moderate Utilizers"}, {"x": -1.347, "y": 0.247, "seg": "Moderate Utilizers"}, {"x": -1.601, "y": -0.006, "seg": "Moderate Utilizers"}, {"x": -1.306, "y": 0.013, "seg": "Moderate Utilizers"}, {"x": -1.465, "y": 1.382, "seg": "Moderate Utilizers"}, {"x": -1.279, "y": 0.145, "seg": "Moderate Utilizers"}, {"x": 0.83, "y": -0.283, "seg": "Moderate Utilizers"}, {"x": 2.358, "y": 0.289, "seg": "Moderate Utilizers"}, {"x": -1.566, "y": 0.72, "seg": "Moderate Utilizers"}, {"x": -1.646, "y": 1.288, "seg": "Moderate Utilizers"}, {"x": -2.048, "y": 0.024, "seg": "Moderate Utilizers"}, {"x": -0.432, "y": 0.457, "seg": "Moderate Utilizers"}, {"x": 0.406, "y": 1.846, "seg": "Moderate Utilizers"}, {"x": -1.341, "y": 0.036, "seg": "Moderate Utilizers"}, {"x": -1.637, "y": -0.468, "seg": "Moderate Utilizers"}, {"x": -1.441, "y": 0.988, "seg": "Moderate Utilizers"}, {"x": -1.49, "y": -0.357, "seg": "Moderate Utilizers"}, {"x": 1.426, "y": 0.953, "seg": "Moderate Utilizers"}, {"x": -1.799, "y": 0.249, "seg": "Moderate Utilizers"}, {"x": 2.176, "y": -0.19, "seg": "Moderate Utilizers"}, {"x": 1.356, "y": -0.42, "seg": "Moderate Utilizers"}, {"x": -1.848, "y": 0.161, "seg": "Moderate Utilizers"}, {"x": -0.612, "y": -0.118, "seg": "Moderate Utilizers"}, {"x": -1.359, "y": 0.384, "seg": "Moderate Utilizers"}, {"x": -0.772, "y": 0.66, "seg": "Moderate Utilizers"}, {"x": -0.541, "y": 0.011, "seg": "Moderate Utilizers"}, {"x": 0.282, "y": 0.018, "seg": "Moderate Utilizers"}, {"x": -1.715, "y": 0.062, "seg": "Moderate Utilizers"}, {"x": -1.834, "y": -0.1, "seg": "Moderate Utilizers"}, {"x": 0.525, "y": 1.851, "seg": "Moderate Utilizers"}, {"x": 0.448, "y": 0.99, "seg": "Moderate Utilizers"}, {"x": -1.213, "y": 0.957, "seg": "Moderate Utilizers"}, {"x": -0.665, "y": 1.785, "seg": "Moderate Utilizers"}, {"x": -1.047, "y": 0.149, "seg": "Moderate Utilizers"}, {"x": 0.686, "y": 0.442, "seg": "Moderate Utilizers"}, {"x": -0.515, "y": -0.011, "seg": "Moderate Utilizers"}, {"x": -1.862, "y": 0.73, "seg": "Moderate Utilizers"}, {"x": -0.638, "y": 0.875, "seg": "Moderate Utilizers"}, {"x": -1.222, "y": 0.515, "seg": "Moderate Utilizers"}, {"x": -1.053, "y": 1.192, "seg": "Moderate Utilizers"}, {"x": -1.547, "y": 1.153, "seg": "Moderate Utilizers"}, {"x": -1.084, "y": -0.277, "seg": "Moderate Utilizers"}, {"x": -1.934, "y": 0.082, "seg": "Moderate Utilizers"}, {"x": -0.931, "y": 0.395, "seg": "Moderate Utilizers"}, {"x": -1.91, "y": -0.108, "seg": "Moderate Utilizers"}, {"x": -1.295, "y": 0.604, "seg": "Moderate Utilizers"}, {"x": 0.738, "y": 0.875, "seg": "Moderate Utilizers"}, {"x": -1.191, "y": -0.688, "seg": "Moderate Utilizers"}, {"x": -1.587, "y": 0.348, "seg": "Moderate Utilizers"}, {"x": -0.048, "y": 0.386, "seg": "Moderate Utilizers"}, {"x": -1.559, "y": -0.166, "seg": "Moderate Utilizers"}, {"x": -0.064, "y": -0.66, "seg": "Moderate Utilizers"}, {"x": -1.035, "y": 0.665, "seg": "Moderate Utilizers"}, {"x": -1.344, "y": 0.095, "seg": "Moderate Utilizers"}, {"x": -0.558, "y": -0.86, "seg": "Moderate Utilizers"}, {"x": -1.843, "y": 0.09, "seg": "Moderate Utilizers"}, {"x": 1.488, "y": 1.114, "seg": "Moderate Utilizers"}, {"x": -1.487, "y": -0.19, "seg": "Moderate Utilizers"}, {"x": -1.959, "y": -0.205, "seg": "Moderate Utilizers"}, {"x": -0.951, "y": 0.441, "seg": "Moderate Utilizers"}, {"x": -1.147, "y": 1.554, "seg": "Moderate Utilizers"}, {"x": -1.913, "y": 0.414, "seg": "Moderate Utilizers"}, {"x": -1.006, "y": -0.051, "seg": "Moderate Utilizers"}, {"x": -1.266, "y": 1.283, "seg": "Moderate Utilizers"}, {"x": 1.636, "y": -0.019, "seg": "Moderate Utilizers"}, {"x": 0.298, "y": 2.318, "seg": "Moderate Utilizers"}, {"x": -1.347, "y": 2.43, "seg": "Moderate Utilizers"}, {"x": 0.026, "y": 1.767, "seg": "Moderate Utilizers"}, {"x": -1.38, "y": -0.316, "seg": "Moderate Utilizers"}, {"x": -1.482, "y": 0.169, "seg": "Moderate Utilizers"}, {"x": -0.014, "y": -0.904, "seg": "Moderate Utilizers"}, {"x": -0.597, "y": 0.695, "seg": "Moderate Utilizers"}, {"x": -0.114, "y": 1.354, "seg": "Moderate Utilizers"}, {"x": -1.344, "y": 1.579, "seg": "Moderate Utilizers"}, {"x": -0.084, "y": 0.826, "seg": "Moderate Utilizers"}, {"x": -0.412, "y": -0.028, "seg": "Moderate Utilizers"}, {"x": -1.506, "y": 0.961, "seg": "Moderate Utilizers"}, {"x": -0.713, "y": 1.757, "seg": "Moderate Utilizers"}, {"x": -1.565, "y": 1.119, "seg": "Moderate Utilizers"}, {"x": -0.967, "y": -0.324, "seg": "Moderate Utilizers"}, {"x": 0.21, "y": 0.283, "seg": "Moderate Utilizers"}, {"x": -1.082, "y": 0.096, "seg": "Moderate Utilizers"}, {"x": -1.439, "y": 0.153, "seg": "Moderate Utilizers"}, {"x": -1.439, "y": -0.085, "seg": "Moderate Utilizers"}, {"x": -1.486, "y": -0.208, "seg": "Moderate Utilizers"}, {"x": -1.307, "y": 0.858, "seg": "Moderate Utilizers"}, {"x": 0.113, "y": 2.874, "seg": "Moderate Utilizers"}, {"x": -0.831, "y": 2.26, "seg": "Moderate Utilizers"}, {"x": -1.45, "y": 0.066, "seg": "Moderate Utilizers"}, {"x": -1.966, "y": -0.196, "seg": "Moderate Utilizers"}, {"x": -1.297, "y": -0.195, "seg": "Moderate Utilizers"}, {"x": -1.879, "y": 0.209, "seg": "Moderate Utilizers"}, {"x": -1.416, "y": 0.519, "seg": "Moderate Utilizers"}, {"x": -1.133, "y": 0.259, "seg": "Moderate Utilizers"}, {"x": -1.861, "y": 0.219, "seg": "Moderate Utilizers"}, {"x": -1.155, "y": -0.49, "seg": "Moderate Utilizers"}, {"x": -1.922, "y": -0.086, "seg": "Moderate Utilizers"}, {"x": -0.726, "y": 0.48, "seg": "Moderate Utilizers"}, {"x": -1.69, "y": 0.088, "seg": "Moderate Utilizers"}, {"x": -1.82, "y": -0.642, "seg": "Moderate Utilizers"}, {"x": -0.81, "y": 0.735, "seg": "Moderate Utilizers"}, {"x": -1.377, "y": 0.283, "seg": "Moderate Utilizers"}, {"x": -1.878, "y": 0.256, "seg": "Moderate Utilizers"}, {"x": -1.096, "y": 0.244, "seg": "Moderate Utilizers"}, {"x": -1.661, "y": 0.565, "seg": "Moderate Utilizers"}, {"x": -1.256, "y": 0.001, "seg": "Moderate Utilizers"}, {"x": -1.579, "y": 1.608, "seg": "Moderate Utilizers"}, {"x": 1.413, "y": 0.575, "seg": "Moderate Utilizers"}, {"x": -1.114, "y": -0.054, "seg": "Moderate Utilizers"}, {"x": -0.849, "y": 0.088, "seg": "Moderate Utilizers"}, {"x": -1.7, "y": 0.894, "seg": "Moderate Utilizers"}, {"x": -0.871, "y": 2.549, "seg": "Moderate Utilizers"}, {"x": -0.638, "y": 0.977, "seg": "Moderate Utilizers"}, {"x": 0.716, "y": 3.974, "seg": "Moderate Utilizers"}, {"x": -1.674, "y": 0.011, "seg": "Moderate Utilizers"}, {"x": 0.601, "y": 1.25, "seg": "Moderate Utilizers"}, {"x": -1.045, "y": 1.637, "seg": "Moderate Utilizers"}, {"x": -1.482, "y": 1.068, "seg": "Moderate Utilizers"}, {"x": -0.726, "y": 0.92, "seg": "Moderate Utilizers"}, {"x": -0.841, "y": 2.017, "seg": "Moderate Utilizers"}, {"x": 0.491, "y": -0.831, "seg": "Moderate Utilizers"}, {"x": -1.041, "y": 0.757, "seg": "Moderate Utilizers"}, {"x": -1.719, "y": 0.542, "seg": "Moderate Utilizers"}, {"x": -1.876, "y": 0.136, "seg": "Moderate Utilizers"}, {"x": -1.525, "y": 0.913, "seg": "Moderate Utilizers"}, {"x": -1.748, "y": 0.096, "seg": "Moderate Utilizers"}, {"x": -0.933, "y": 0.237, "seg": "Moderate Utilizers"}, {"x": -1.044, "y": -0.099, "seg": "Moderate Utilizers"}, {"x": -1.719, "y": 0.346, "seg": "Moderate Utilizers"}, {"x": -0.66, "y": 0.132, "seg": "Moderate Utilizers"}, {"x": -0.622, "y": 1.407, "seg": "Moderate Utilizers"}, {"x": -2.072, "y": 0.645, "seg": "Moderate Utilizers"}, {"x": -1.139, "y": -0.131, "seg": "Moderate Utilizers"}, {"x": -1.892, "y": 0.124, "seg": "Moderate Utilizers"}, {"x": -1.009, "y": -0.058, "seg": "Moderate Utilizers"}, {"x": -1.554, "y": 0.568, "seg": "Moderate Utilizers"}, {"x": -1.358, "y": 1.457, "seg": "Moderate Utilizers"}, {"x": -1.062, "y": -0.528, "seg": "Moderate Utilizers"}, {"x": -0.866, "y": 2.597, "seg": "Moderate Utilizers"}, {"x": 0.307, "y": 1.62, "seg": "Moderate Utilizers"}, {"x": -0.546, "y": 0.165, "seg": "Moderate Utilizers"}, {"x": -1.481, "y": 0.569, "seg": "Moderate Utilizers"}, {"x": -1.558, "y": 0.743, "seg": "Moderate Utilizers"}, {"x": -0.036, "y": 0.304, "seg": "Moderate Utilizers"}, {"x": -1.045, "y": -0.112, "seg": "Moderate Utilizers"}, {"x": -1.533, "y": -0.474, "seg": "Moderate Utilizers"}, {"x": -1.057, "y": 0.047, "seg": "Moderate Utilizers"}, {"x": -1.387, "y": 0.257, "seg": "Moderate Utilizers"}, {"x": -0.228, "y": 0.924, "seg": "Moderate Utilizers"}, {"x": -1.212, "y": 0.171, "seg": "Moderate Utilizers"}, {"x": -1.719, "y": 1.861, "seg": "Moderate Utilizers"}, {"x": -1.528, "y": 0.103, "seg": "Moderate Utilizers"}, {"x": 1.049, "y": 0.225, "seg": "Moderate Utilizers"}, {"x": -1.638, "y": 1.801, "seg": "Moderate Utilizers"}, {"x": 0.186, "y": 2.216, "seg": "Moderate Utilizers"}, {"x": -1.285, "y": -0.087, "seg": "Moderate Utilizers"}, {"x": -0.752, "y": 0.642, "seg": "Moderate Utilizers"}, {"x": -1.27, "y": 0.181, "seg": "Moderate Utilizers"}, {"x": -0.687, "y": 0.18, "seg": "Moderate Utilizers"}, {"x": -1.362, "y": -0.697, "seg": "Moderate Utilizers"}, {"x": 0.194, "y": 0.698, "seg": "Moderate Utilizers"}, {"x": -1.221, "y": -0.252, "seg": "Moderate Utilizers"}, {"x": -0.599, "y": 1.096, "seg": "Moderate Utilizers"}, {"x": -1.749, "y": 0.411, "seg": "Moderate Utilizers"}, {"x": -1.293, "y": -0.048, "seg": "Moderate Utilizers"}, {"x": 0.056, "y": -0.049, "seg": "Moderate Utilizers"}, {"x": -2.073, "y": -0.19, "seg": "Moderate Utilizers"}, {"x": -1.705, "y": 0.495, "seg": "Moderate Utilizers"}, {"x": -1.124, "y": 0.651, "seg": "Moderate Utilizers"}, {"x": -0.932, "y": 0.161, "seg": "Moderate Utilizers"}, {"x": -1.284, "y": 1.6, "seg": "Moderate Utilizers"}, {"x": -0.914, "y": -0.165, "seg": "Moderate Utilizers"}, {"x": -1.099, "y": 0.504, "seg": "Moderate Utilizers"}, {"x": -1.016, "y": 0.644, "seg": "Moderate Utilizers"}, {"x": 6.803, "y": -2.604, "seg": "Premium Transactors"}, {"x": 4.081, "y": -1.14, "seg": "Premium Transactors"}, {"x": 9.989, "y": -1.493, "seg": "Premium Transactors"}, {"x": 3.775, "y": -1.432, "seg": "Premium Transactors"}, {"x": 3.178, "y": -0.265, "seg": "Premium Transactors"}, {"x": 12.222, "y": -1.765, "seg": "Premium Transactors"}, {"x": 3.848, "y": -1.097, "seg": "Premium Transactors"}, {"x": 5.63, "y": -2.438, "seg": "Premium Transactors"}, {"x": 7.899, "y": -1.525, "seg": "Premium Transactors"}, {"x": 5.225, "y": -1.157, "seg": "Premium Transactors"}, {"x": 3.804, "y": -0.675, "seg": "Premium Transactors"}, {"x": 7.698, "y": -2.681, "seg": "Premium Transactors"}, {"x": 5.612, "y": 0.756, "seg": "Premium Transactors"}, {"x": 12.226, "y": 1.795, "seg": "Premium Transactors"}, {"x": 5.59, "y": 0.139, "seg": "Premium Transactors"}, {"x": 2.843, "y": -0.872, "seg": "Premium Transactors"}, {"x": 3.442, "y": -2.335, "seg": "Premium Transactors"}, {"x": 6.272, "y": -2.744, "seg": "Premium Transactors"}, {"x": 10.161, "y": -2.679, "seg": "Premium Transactors"}, {"x": 2.584, "y": 0.917, "seg": "Premium Transactors"}, {"x": 4.566, "y": 1.25, "seg": "Premium Transactors"}, {"x": 11.369, "y": 0.254, "seg": "Premium Transactors"}, {"x": 3.336, "y": -1.994, "seg": "Premium Transactors"}, {"x": 8.952, "y": 1.208, "seg": "Premium Transactors"}, {"x": 3.329, "y": -0.595, "seg": "Premium Transactors"}, {"x": 3.081, "y": -2.507, "seg": "Premium Transactors"}, {"x": 8.228, "y": 3.842, "seg": "Premium Transactors"}, {"x": 4.017, "y": -1.779, "seg": "Premium Transactors"}, {"x": 5.154, "y": -2.64, "seg": "Premium Transactors"}, {"x": 3.612, "y": -2.551, "seg": "Premium Transactors"}, {"x": 5.8, "y": 0.75, "seg": "Premium Transactors"}, {"x": 3.594, "y": -1.083, "seg": "Premium Transactors"}, {"x": 12.077, "y": -1.763, "seg": "Premium Transactors"}, {"x": 4.535, "y": -2.103, "seg": "Premium Transactors"}, {"x": 3.079, "y": -0.222, "seg": "Premium Transactors"}, {"x": 3.657, "y": -0.878, "seg": "Premium Transactors"}, {"x": 3.032, "y": -0.862, "seg": "Premium Transactors"}, {"x": 5.154, "y": -2.218, "seg": "Premium Transactors"}, {"x": 4.175, "y": 1.371, "seg": "Premium Transactors"}, {"x": 3.708, "y": -1.621, "seg": "Premium Transactors"}, {"x": 5.024, "y": 0.014, "seg": "Premium Transactors"}, {"x": 4.912, "y": -0.56, "seg": "Premium Transactors"}, {"x": 5.768, "y": 1.314, "seg": "Premium Transactors"}, {"x": 5.035, "y": -1.923, "seg": "Premium Transactors"}, {"x": 3.538, "y": -1.287, "seg": "Premium Transactors"}, {"x": 4.779, "y": 0.032, "seg": "Premium Transactors"}, {"x": 9.518, "y": -1.755, "seg": "Premium Transactors"}, {"x": 8.382, "y": -3.048, "seg": "Premium Transactors"}, {"x": 7.735, "y": -2.797, "seg": "Premium Transactors"}, {"x": 3.177, "y": -1.163, "seg": "Premium Transactors"}, {"x": 7.044, "y": 0.007, "seg": "Premium Transactors"}, {"x": 7.453, "y": -0.924, "seg": "Premium Transactors"}, {"x": 4.681, "y": -2.6, "seg": "Premium Transactors"}, {"x": 12.429, "y": 2.84, "seg": "Premium Transactors"}, {"x": 7.34, "y": -3.287, "seg": "Premium Transactors"}, {"x": 4.419, "y": 1.009, "seg": "Premium Transactors"}, {"x": 2.961, "y": -2.512, "seg": "Premium Transactors"}, {"x": 9.09, "y": -3.416, "seg": "Premium Transactors"}, {"x": 8.592, "y": -0.851, "seg": "Premium Transactors"}, {"x": 4.411, "y": -2.532, "seg": "Premium Transactors"}, {"x": 11.742, "y": 6.826, "seg": "Premium Transactors"}, {"x": 3.2, "y": -1.01, "seg": "Premium Transactors"}, {"x": 6.633, "y": 1.223, "seg": "Premium Transactors"}, {"x": 5.604, "y": -2.762, "seg": "Premium Transactors"}, {"x": 7.385, "y": -1.391, "seg": "Premium Transactors"}, {"x": 2.644, "y": -0.542, "seg": "Premium Transactors"}, {"x": 5.82, "y": -3.301, "seg": "Premium Transactors"}, {"x": 3.847, "y": 0.948, "seg": "Premium Transactors"}, {"x": 8.339, "y": -2.546, "seg": "Premium Transactors"}, {"x": 4.238, "y": -0.132, "seg": "Premium Transactors"}, {"x": 5.559, "y": 3.301, "seg": "Premium Transactors"}, {"x": 5.206, "y": -0.766, "seg": "Premium Transactors"}, {"x": 3.675, "y": -0.049, "seg": "Premium Transactors"}, {"x": 10.024, "y": -3.005, "seg": "Premium Transactors"}, {"x": 5.818, "y": -2.579, "seg": "Premium Transactors"}, {"x": 4.764, "y": -2.08, "seg": "Premium Transactors"}, {"x": 3.586, "y": 0.569, "seg": "Premium Transactors"}, {"x": 4.543, "y": 3.294, "seg": "Premium Transactors"}, {"x": 10.355, "y": 0.846, "seg": "Premium Transactors"}, {"x": 5.917, "y": -2.309, "seg": "Premium Transactors"}, {"x": 2.917, "y": 0.28, "seg": "Premium Transactors"}, {"x": 3.032, "y": -1.334, "seg": "Premium Transactors"}, {"x": 2.695, "y": -1.876, "seg": "Premium Transactors"}, {"x": 3.021, "y": -0.692, "seg": "Premium Transactors"}, {"x": 6.599, "y": -1.262, "seg": "Premium Transactors"}, {"x": 5.255, "y": 0.428, "seg": "Premium Transactors"}, {"x": 7.222, "y": -2.638, "seg": "Premium Transactors"}, {"x": 3.887, "y": -1.527, "seg": "Premium Transactors"}, {"x": 6.532, "y": -0.96, "seg": "Premium Transactors"}, {"x": 11.144, "y": -1.588, "seg": "Premium Transactors"}, {"x": 10.742, "y": -3.373, "seg": "Premium Transactors"}, {"x": 4.296, "y": 0.851, "seg": "Premium Transactors"}, {"x": 5.223, "y": -2.752, "seg": "Premium Transactors"}, {"x": 4.675, "y": -2.067, "seg": "Premium Transactors"}, {"x": 4.235, "y": -1.433, "seg": "Premium Transactors"}, {"x": 4.265, "y": -1.5, "seg": "Premium Transactors"}, {"x": 3.836, "y": -0.823, "seg": "Premium Transactors"}, {"x": 4.687, "y": 3.029, "seg": "Premium Transactors"}, {"x": 9.641, "y": -1.121, "seg": "Premium Transactors"}, {"x": 2.912, "y": -2.567, "seg": "Premium Transactors"}, {"x": 4.135, "y": -0.909, "seg": "Premium Transactors"}, {"x": 4.214, "y": 0.667, "seg": "Premium Transactors"}, {"x": 4.924, "y": -0.626, "seg": "Premium Transactors"}, {"x": 3.229, "y": -1.076, "seg": "Premium Transactors"}, {"x": 2.881, "y": 1.498, "seg": "Premium Transactors"}, {"x": 4.945, "y": -0.283, "seg": "Premium Transactors"}, {"x": 4.522, "y": -1.661, "seg": "Premium Transactors"}, {"x": 3.401, "y": 0.525, "seg": "Premium Transactors"}, {"x": 6.603, "y": 3.055, "seg": "Premium Transactors"}, {"x": 4.018, "y": -1.97, "seg": "Premium Transactors"}, {"x": 5.275, "y": -2.758, "seg": "Premium Transactors"}, {"x": 3.102, "y": 0.885, "seg": "Premium Transactors"}, {"x": 7.274, "y": 1.778, "seg": "Premium Transactors"}, {"x": 10.901, "y": 0.354, "seg": "Premium Transactors"}, {"x": 3.795, "y": -2.383, "seg": "Premium Transactors"}, {"x": 5.327, "y": -1.724, "seg": "Premium Transactors"}, {"x": 11.418, "y": -2.565, "seg": "Premium Transactors"}, {"x": 6.359, "y": -2.31, "seg": "Premium Transactors"}, {"x": 6.79, "y": -2.859, "seg": "Premium Transactors"}, {"x": 5.427, "y": -3.149, "seg": "Premium Transactors"}, {"x": 8.731, "y": 1.834, "seg": "Premium Transactors"}, {"x": 3.351, "y": -1.561, "seg": "Premium Transactors"}, {"x": 4.056, "y": -2.718, "seg": "Premium Transactors"}, {"x": 8.214, "y": -3.318, "seg": "Premium Transactors"}, {"x": 11.598, "y": -3.327, "seg": "Premium Transactors"}, {"x": 9.703, "y": 4.141, "seg": "Premium Transactors"}, {"x": 6.466, "y": 2.344, "seg": "Premium Transactors"}, {"x": 8.288, "y": -1.164, "seg": "Premium Transactors"}, {"x": 5.174, "y": -2.451, "seg": "Premium Transactors"}, {"x": 3.207, "y": -2.405, "seg": "Premium Transactors"}, {"x": 5.755, "y": -2.025, "seg": "Premium Transactors"}, {"x": 5.312, "y": 0.264, "seg": "Premium Transactors"}, {"x": 7.715, "y": 0.049, "seg": "Premium Transactors"}, {"x": 6.388, "y": -1.773, "seg": "Premium Transactors"}, {"x": 9.129, "y": -2.582, "seg": "Premium Transactors"}, {"x": 11.347, "y": 2.67, "seg": "Premium Transactors"}, {"x": 5.974, "y": -2.895, "seg": "Premium Transactors"}, {"x": 6.489, "y": -2.928, "seg": "Premium Transactors"}, {"x": 3.765, "y": -1.894, "seg": "Premium Transactors"}, {"x": 3.095, "y": -2.558, "seg": "Premium Transactors"}, {"x": 5.596, "y": 0.752, "seg": "Premium Transactors"}, {"x": 6.077, "y": -3.014, "seg": "Premium Transactors"}, {"x": 4.372, "y": 1.959, "seg": "Premium Transactors"}, {"x": 3.293, "y": -0.566, "seg": "Premium Transactors"}, {"x": 12.868, "y": -2.279, "seg": "Premium Transactors"}, {"x": 7.263, "y": 0.995, "seg": "Premium Transactors"}, {"x": 9.841, "y": 0.839, "seg": "Premium Transactors"}, {"x": 3.601, "y": -0.246, "seg": "Premium Transactors"}, {"x": 6.582, "y": 2.809, "seg": "Premium Transactors"}, {"x": 4.588, "y": -2.75, "seg": "Premium Transactors"}, {"x": 4.899, "y": 2.502, "seg": "Premium Transactors"}, {"x": 2.991, "y": -2.451, "seg": "Premium Transactors"}, {"x": 3.17, "y": -2.51, "seg": "Premium Transactors"}, {"x": 2.835, "y": -1.932, "seg": "Premium Transactors"}], "pca_variance": [25.9, 21.4], "pca_sample_size": 2001, "pca_total_size": 8950}
+</script>
+<script>
+// ============ DATA ============
+const DATA = JSON.parse(document.getElementById('dashboard-data').textContent);
+
+const SEG_ORDER = ["Low-Balance Casual Spenders","High-Risk Revolvers","Moderate Utilizers","Premium Transactors"];
+const SEG_COLOR = {
+  "Low-Balance Casual Spenders": "#2E6F9E",
+  "High-Risk Revolvers": "#C0472B",
+  "Moderate Utilizers": "#D68A1D",
+  "Premium Transactors": "#1C7A5E"
+};
+const SEG_BG = {
+  "Low-Balance Casual Spenders": "#EAF2F8",
+  "High-Risk Revolvers": "#FBEBE7",
+  "Moderate Utilizers": "#FBF1DF",
+  "Premium Transactors": "#E7F3EF"
+};
+const SEG_SHORT = {
+  "Low-Balance Casual Spenders": "Low-Balance Casual",
+  "High-Risk Revolvers": "High-Risk Revolvers",
+  "Moderate Utilizers": "Moderate Utilizers",
+  "Premium Transactors": "Premium Transactors"
+};
+
+const PERSONA_TEXT = {
+  "Low-Balance Casual Spenders": {
+    who: "Largest segment — low balance, low utilization, moderate purchase activity",
+    why: "Hold only 9.2% of portfolio balance but contribute 28.3% of payments — the highest payment share of any segment, on the lowest limit usage ratio (0.09) in the portfolio. A well-behaved, low-risk base with substantial unused credit headroom.",
+    focus: "Activation and share-of-wallet growth through category-based spend offers and recurring-payment enrollment — not credit-led messaging, since utilization is already very low."
+  },
+  "High-Risk Revolvers": {
+    who: "Smallest-but-one segment — highest balance and heaviest cash advance reliance",
+    why: "Hold 32.4% of portfolio balance while generating 57.2% of aggregate cash advance volume, at the highest cash advance frequency (0.42) and lowest purchase frequency (0.30) in the portfolio. Cash advance is a costly liquidity channel for the customer.",
+    focus: "Structured credit substitution — offering a transparent, lower-cost alternative (e.g., personal loan or credit line) to recurring cash advance use."
+  },
+  "Moderate Utilizers": {
+    who: "Second-largest segment — highest utilization, weakest repayment discipline",
+    why: "Hold 45.5% of aggregate portfolio balance but contribute only 21.8% of aggregate payments — the widest gap in the portfolio — combined with the highest limit usage ratio (0.72) and lowest full-payment rate (0.9%). A potential repayment/engagement signal, not a risk classification.",
+    focus: "Payment support and instalment conversion, with enhanced monitoring pending validation against outcome data this dataset does not contain (delinquency, bureau data)."
+  },
+  "Premium Transactors": {
+    who: "Smallest segment — highest purchase volume and strongest repayment profile",
+    why: "Generate 42.8% of aggregate portfolio purchase volume from just 688 customers (7.7% of the base), with the highest payment-to-minimum ratio (13.7) and full-payment rate (30.3%) in the portfolio.",
+    focus: "Retention and premium cross-sell — this segment carries the highest attrition cost per customer and the strongest fit for premium product upgrades."
+  }
+};
+
+function fmtPct(v){ return v.toFixed(1) + '%'; }
+function fmtNum(v, d=2){ return Number(v).toLocaleString(undefined, {maximumFractionDigits:d}); }
+
+// ============ TAB NAVIGATION ============
+document.getElementById('navtabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('.navtabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  // lazy render charts on first visit to a tab
+  renderTabCharts(btn.dataset.tab);
+});
+
+document.getElementById('pmodeBtn').addEventListener('click', ()=>{
+  document.body.classList.toggle('pmode');
+  document.getElementById('pmodeBtn').textContent = document.body.classList.contains('pmode') ? 'Exit Presentation Mode' : 'Presentation Mode';
+  window.dispatchEvent(new Event('resize'));
+});
+
+// ============ EXECUTIVE OVERVIEW CHARTS ============
+function renderOverviewCharts(){
+  const labels = SEG_ORDER;
+  const vals = labels.map(l => DATA.sizes[l]);
+  const pcts = labels.map(l => (DATA.sizes[l]/DATA.total_customers*100));
+  const colors = labels.map(l => SEG_COLOR[l]);
+
+  Plotly.newPlot('chart-seg-donut', [{
+    type:'pie', labels: labels.map(l=>SEG_SHORT[l]), values: vals, hole:0.55,
+    marker:{colors: colors, line:{color:'#fff', width:2}},
+    textinfo:'label+percent', textposition:'outside', automargin:true,
+    hovertemplate:'%{label}<br>%{value:,} customers (%{percent})<extra></extra>'
+  }], {
+    margin:{t:10,b:10,l:10,r:10}, showlegend:false, font:{family:'inherit', size:11.5},
+    annotations:[{text:'8,950<br>customers', showarrow:false, font:{size:14, color:'#1A2B3C'}}]
+  }, {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-seg-bar', [{
+    type:'bar', x: pcts, y: labels.map(l=>SEG_SHORT[l]), orientation:'h',
+    marker:{color: colors},
+    text: pcts.map(p=>p.toFixed(1)+'%'), textposition:'outside',
+    hovertemplate:'%{y}<br>%{x:.1f}%<extra></extra>'
+  }], {
+    margin:{t:10,b:30,l:150,r:40}, xaxis:{title:'% of customers', range:[0,55], gridcolor:'#EEF2F5'},
+    yaxis:{automargin:true}, font:{family:'inherit', size:11.5}
+  }, {displayModeBar:false, responsive:true});
+}
+
+// ============ SEGMENT EXPLORER ============
+let selectedSeg = "Moderate Utilizers";
+
+function renderSegSelector(){
+  const el = document.getElementById('seg-selector');
+  el.innerHTML = SEG_ORDER.map(seg => {
+    const pct = (DATA.sizes[seg]/DATA.total_customers*100).toFixed(1);
+    const cnt = DATA.sizes[seg].toLocaleString();
+    const isSel = seg === selectedSeg;
+    return `<div class="seg-card ${isSel?'sel':''}" data-seg="${seg}" style="--dot:${SEG_COLOR[seg]}">
+      <span class="seg-dot" style="background:${SEG_COLOR[seg]}"></span><span class="segname">${SEG_SHORT[seg]}</span>
+      <div class="segpct" style="color:${SEG_COLOR[seg]}">${pct}%</div>
+      <div class="segcount">${cnt} customers</div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.seg-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      selectedSeg = card.dataset.seg;
+      renderSegSelector();
+      renderPersona();
+    });
+  });
+}
+
+function metricRow(label, val, note){
+  return `<div class="metric"><div class="mlbl">${label}</div><div class="mval">${val}</div>${note?`<div class="mnote">${note}</div>`:''}</div>`;
+}
+
+function renderPersona(){
+  const seg = selectedSeg;
+  const p = DATA.profiles[seg];
+  const pct = (DATA.sizes[seg]/DATA.total_customers*100).toFixed(1);
+  const cnt = DATA.sizes[seg].toLocaleString();
+  const color = SEG_COLOR[seg];
+  const txt = PERSONA_TEXT[seg];
+
+  const head = document.getElementById('persona-head');
+  head.style.background = `linear-gradient(135deg, ${color}, ${color}CC)`;
+  document.getElementById('p-name').textContent = seg;
+  document.getElementById('p-who').textContent = txt.who;
+  document.getElementById('p-pct').textContent = pct + '%';
+  document.getElementById('p-count').textContent = cnt + ' customers of 8,950';
+  document.getElementById('p-why').textContent = txt.why;
+  document.getElementById('p-focus').textContent = txt.focus;
+
+  const metrics = document.getElementById('p-metrics');
+  metrics.innerHTML = [
+    metricRow('Mean Balance', fmtNum(p.BALANCE)+' MU'),
+    metricRow('Mean Credit Limit', fmtNum(p.CREDIT_LIMIT)+' MU'),
+    metricRow('Limit Usage Ratio', fmtNum(p.LIMIT_USAGE_RATIO,2)),
+    metricRow('Mean Purchases', fmtNum(p.PURCHASES)+' MU'),
+    metricRow('Purchase Transactions', fmtNum(p.PURCHASES_TRX,1)),
+    metricRow('One-Off Purchase Share', fmtNum(p.ONEOFF_PURCHASE_SHARE,2)),
+    metricRow('Mean Cash Advance', fmtNum(p.CASH_ADVANCE)+' MU'),
+    metricRow('Cash Advance Frequency', fmtNum(p.CASH_ADVANCE_FREQUENCY,2)),
+    metricRow('Mean Payments', fmtNum(p.PAYMENTS)+' MU'),
+    metricRow('Payment-to-Minimum Ratio', fmtNum(p.PAYMENT_TO_MIN_RATIO,2)),
+    metricRow('Full Payment Rate', fmtNum(p.PRC_FULL_PAYMENT,2)),
+    metricRow('Tenure (months)', fmtNum(p.TENURE,1)),
+  ].join('');
+
+  const vc = DATA.value_contribution[seg];
+  Plotly.newPlot('chart-explorer-value', [{
+    type:'bar', x:['Balance','Payments','Purchases','Cash Advance'],
+    y:[vc.TotBal, vc.TotPay, vc.TotPur, vc.TotCA],
+    marker:{color: color},
+    text:[vc.TotBal, vc.TotPay, vc.TotPur, vc.TotCA].map(v=>v.toFixed(1)+'%'),
+    textposition:'outside',
+    hovertemplate:'%{x}: %{y:.1f}% of portfolio total<extra></extra>'
+  }], {
+    margin:{t:10,b:35,l:40,r:10}, yaxis:{title:'% of portfolio total', gridcolor:'#EEF2F5'},
+    font:{family:'inherit', size:11.5}
+  }, {displayModeBar:false, responsive:true});
+}
+
+// ============ BEHAVIORAL ANALYSIS ============
+function renderRadar(){
+  const vars = ['BALANCE','PURCHASES','CASH_ADVANCE','CREDIT_LIMIT','PAYMENTS','LIMIT_USAGE_RATIO','PRC_FULL_PAYMENT'];
+  const labels = ['Balance','Purchases','Cash advance','Credit limit','Payments','Limit usage ratio','Full payment rate'];
+  // normalize 0-1 across segments per variable
+  const mins = {}, maxs = {};
+  vars.forEach(v=>{
+    const vals = SEG_ORDER.map(s=>DATA.profiles[s][v]);
+    mins[v] = Math.min(...vals); maxs[v] = Math.max(...vals);
+  });
+  const traces = SEG_ORDER.map(seg=>{
+    const r = vars.map(v=> (maxs[v]-mins[v])>0 ? (DATA.profiles[seg][v]-mins[v])/(maxs[v]-mins[v]) : 0);
+    r.push(r[0]);
+    return {
+      type:'scatterpolar', r:r, theta:[...labels, labels[0]], fill:'toself', name: SEG_SHORT[seg],
+      line:{color: SEG_COLOR[seg]}, fillcolor: SEG_COLOR[seg]+'33',
+      hovertemplate:'%{theta}: %{r:.2f} (normalized)<extra>'+SEG_SHORT[seg]+'</extra>'
+    };
+  });
+  Plotly.newPlot('chart-radar', traces, {
+    polar:{radialaxis:{visible:true, range:[0,1], showticklabels:false}},
+    margin:{t:20,b:20,l:40,r:40}, legend:{orientation:'h', y:-0.12, font:{size:11}},
+    font:{family:'inherit', size:11}
+  }, {displayModeBar:false, responsive:true});
+}
+
+let pcaVisible = {}; SEG_ORDER.forEach(s=>pcaVisible[s]=true);
+
+function pcaTraces(){
+  return SEG_ORDER.map(seg=>{
+    const pts = DATA.pca_sample.filter(p=>p.seg===seg);
+    return {
+      type:'scattergl', mode:'markers', name: SEG_SHORT[seg],
+      x: pts.map(p=>p.x), y: pts.map(p=>p.y),
+      marker:{color: SEG_COLOR[seg], size:5, opacity:0.55},
+      visible: pcaVisible[seg] ? true : 'legendonly',
+      hovertemplate: SEG_SHORT[seg]+'<br>PC1: %{x}<br>PC2: %{y}<extra></extra>'
+    };
+  });
+}
+
+function renderPCA(divId){
+  Plotly.newPlot(divId, pcaTraces(), {
+    xaxis:{title:`PC1 (${DATA.pca_variance[0]}% variance)`, gridcolor:'#EEF2F5', zeroline:false},
+    yaxis:{title:`PC2 (${DATA.pca_variance[1]}% variance)`, gridcolor:'#EEF2F5', zeroline:false},
+    margin:{t:10,b:40,l:50,r:10}, legend:{orientation:'h', y:-0.2, font:{size:11}},
+    font:{family:'inherit', size:11}
+  }, {displayModeBar:false, responsive:true});
+  const el = document.getElementById(divId);
+  el.on && el.on('plotly_legendclick', function(ev){
+    const seg = SEG_ORDER[ev.curveNumber];
+    pcaVisible[seg] = !pcaVisible[seg];
+    return true;
+  });
+}
+
+function boxTrace(metric){
+  return SEG_ORDER.map(seg=>{
+    const b = DATA.boxplot[seg][metric];
+    return {
+      type:'box', name: SEG_SHORT[seg],
+      q1:[b.q1], median:[b.median], q3:[b.q3], lowerfence:[b.min], upperfence:[b.max],
+      marker:{color: SEG_COLOR[seg]}, line:{color: SEG_COLOR[seg]},
+      hovertemplate:`Median: ${b.median.toFixed(0)} MU<br>Q1: ${b.q1.toFixed(0)}<br>Q3: ${b.q3.toFixed(0)}<extra>${SEG_SHORT[seg]}</extra>`
+    };
+  });
+}
+
+function renderBoxplots(){
+  Plotly.newPlot('chart-box-balance', boxTrace('BALANCE'), {
+    margin:{t:10,b:60,l:50,r:10}, showlegend:false, yaxis:{title:'Balance (MU)', gridcolor:'#EEF2F5'},
+    font:{family:'inherit', size:11}
+  }, {displayModeBar:false, responsive:true});
+  Plotly.newPlot('chart-box-purchase', boxTrace('PURCHASES'), {
+    margin:{t:10,b:60,l:50,r:10}, showlegend:false, yaxis:{title:'Purchases (MU)', gridcolor:'#EEF2F5'},
+    font:{family:'inherit', size:11}
+  }, {displayModeBar:false, responsive:true});
+}
+
+function renderMiniCharts(){
+  Plotly.newPlot('chart-cash', [{
+    type:'bar', x: SEG_ORDER.map(s=>SEG_SHORT[s]), y: SEG_ORDER.map(s=>DATA.profiles[s].CASH_ADVANCE),
+    marker:{color: SEG_ORDER.map(s=>SEG_COLOR[s])},
+    hovertemplate:'%{x}<br>Mean cash advance: %{y:.0f} MU<extra></extra>'
+  }], {margin:{t:10,b:70,l:45,r:10}, yaxis:{title:'Mean cash advance (MU)', gridcolor:'#EEF2F5'}, font:{family:'inherit',size:10.5}}, {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-payment', [{
+    type:'bar', x: SEG_ORDER.map(s=>SEG_SHORT[s]), y: SEG_ORDER.map(s=>DATA.profiles[s].PAYMENT_TO_MIN_RATIO),
+    marker:{color: SEG_ORDER.map(s=>SEG_COLOR[s])},
+    hovertemplate:'%{x}<br>Payment-to-min ratio: %{y:.2f}<extra></extra>'
+  }], {margin:{t:10,b:70,l:40,r:10}, yaxis:{title:'Payment-to-min ratio', gridcolor:'#EEF2F5'}, font:{family:'inherit',size:10.5}}, {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-utilization', [{
+    type:'bar', x: SEG_ORDER.map(s=>SEG_SHORT[s]), y: SEG_ORDER.map(s=>DATA.profiles[s].LIMIT_USAGE_RATIO),
+    marker:{color: SEG_ORDER.map(s=>SEG_COLOR[s])},
+    hovertemplate:'%{x}<br>Limit usage ratio: %{y:.2f}<extra></extra>'
+  }], {margin:{t:10,b:70,l:40,r:10}, yaxis:{title:'Limit usage ratio', gridcolor:'#EEF2F5'}, font:{family:'inherit',size:10.5}}, {displayModeBar:false, responsive:true});
+}
+
+// ============ VALUE & RISK ============
+function renderValueRisk(){
+  const bubbleScale = 2.2;
+  Plotly.newPlot('chart-matrix', [{
+    type:'scatter', mode:'markers+text',
+    x: SEG_ORDER.map(s=>DATA.profiles[s].LIMIT_USAGE_RATIO),
+    y: SEG_ORDER.map(s=>DATA.value_contribution[s].TotPay),
+    text: SEG_ORDER.map(s=>SEG_SHORT[s]),
+    textposition:'top center',
+    marker:{
+      size: SEG_ORDER.map(s=>Math.sqrt(DATA.value_contribution[s].TotBal)*bubbleScale*3.2),
+      color: SEG_ORDER.map(s=>SEG_COLOR[s]),
+      opacity:0.75, line:{color:'#fff', width:1.5}
+    },
+    hovertemplate:'%{text}<br>Limit usage ratio: %{x:.2f}<br>Share of payments: %{y:.1f}%<extra></extra>'
+  }], {
+    xaxis:{title:'Risk-sensitive behavioral signal (mean limit usage ratio)', gridcolor:'#EEF2F5', range:[0,0.9]},
+    yaxis:{title:'Share of portfolio payments (%)', gridcolor:'#EEF2F5', range:[15,35]},
+    margin:{t:10,b:45,l:55,r:20}, font:{family:'inherit', size:11}
+  }, {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-value-compare', [
+    {type:'bar', name:'Share of balance', x: SEG_ORDER.map(s=>SEG_SHORT[s]), y: SEG_ORDER.map(s=>DATA.value_contribution[s].TotBal), marker:{color:'#8AA6BC'}},
+    {type:'bar', name:'Share of payments', x: SEG_ORDER.map(s=>SEG_SHORT[s]), y: SEG_ORDER.map(s=>DATA.value_contribution[s].TotPay), marker:{color:'#D68A1D'}}
+  ], {
+    barmode:'group', margin:{t:10,b:70,l:45,r:10}, yaxis:{title:'% of portfolio total', gridcolor:'#EEF2F5'},
+    legend:{orientation:'h', y:-0.35}, font:{family:'inherit', size:10.5}
+  }, {displayModeBar:false, responsive:true});
+
+  const rows = SEG_ORDER.map(s=>{
+    const p = DATA.profiles[s];
+    return `<tr><td><span class="seg-dot" style="background:${SEG_COLOR[s]}"></span>${s}</td>
+      <td>${fmtNum(p.LIMIT_USAGE_RATIO,2)}</td>
+      <td>${fmtNum(p.PAYMENT_TO_MIN_RATIO,2)}</td>
+      <td>${fmtNum(p.PRC_FULL_PAYMENT,3)}</td>
+      <td>${fmtPct(DATA.value_contribution[s].TotBal)}</td>
+      <td>${fmtPct(DATA.value_contribution[s].TotPay)}</td></tr>`;
+  }).join('');
+  document.getElementById('risk-table').innerHTML =
+    `<tr><th>Segment</th><th>Limit Usage Ratio</th><th>Payment-to-Min Ratio</th><th>Full Payment Rate</th><th>Share of Balance</th><th>Share of Payments</th></tr>${rows}`;
+}
+
+// ============ CRM STRATEGY ============
+const CRM_DATA = {
+  "Moderate Utilizers": {
+    insight: "Highest limit usage ratio (0.72), lowest payment-to-minimum ratio (1.61), 45.5% of balance vs. 21.8% of payments.",
+    objective: "Reduce balance-to-payment imbalance while retaining the relationship.",
+    action: "Proactive instalment/EMI conversion offers on existing balances; flexible repayment date selection.",
+    channel: "In-app + statement-linked messaging (support-framed, not collections-framed)",
+    kpi: "Payment-to-minimum ratio; instalment conversion take-up rate",
+    impact:"High", effort:"Medium"
+  },
+  "High-Risk Revolvers": {
+    insight: "Highest cash advance (5,009 MU) and cash advance frequency (0.42); lowest purchase frequency (0.30).",
+    objective: "Migrate recurring liquidity demand from cash advance to structured credit.",
+    action: "Pre-qualified personal loan / credit line offered as a transparent, lower-cost alternative to cash advance.",
+    channel: "Direct relationship contact (segment size and offer complexity warrant it)",
+    kpi: "Monthly average cash advance; structured-product take-up rate",
+    impact:"High", effort:"High"
+  },
+  "Low-Balance Casual Spenders": {
+    insight: "Lowest limit usage ratio (0.09); highest share of portfolio payments (28.3%) on lowest share of balance (9.2%).",
+    objective: "Increase transaction frequency and share of wallet in an already well-behaved base.",
+    action: "Category-based spend stimulation (merchant offers, milestone rewards); recurring-payment enrollment.",
+    channel: "Low-cost digital — app notification, email",
+    kpi: "Purchase frequency; monthly average purchases",
+    impact:"Medium", effort:"Low"
+  },
+  "Premium Transactors": {
+    insight: "42.8% of aggregate purchase volume from 7.7% of customers; highest payment-to-minimum ratio (13.7) and full payment rate (30.3%).",
+    objective: "Protect the portfolio's largest source of purchase volume from attrition.",
+    action: "Premium retention programme — enhanced rewards, service tier, proactive contact before renewal points.",
+    channel: "Relationship management with priority servicing",
+    kpi: "Segment retention rate; cross-sell penetration",
+    impact:"High", effort:"Medium"
+  }
+};
+
+function renderCRMCards(){
+  const el = document.getElementById('crm-cards');
+  el.innerHTML = SEG_ORDER.map(seg=>{
+    const c = CRM_DATA[seg];
+    return `<div class="crm-card">
+      <div class="crm-head"><span class="seg-dot" style="background:${SEG_COLOR[seg]}"></span><span class="segname">${seg}</span></div>
+      <div class="crm-flow">
+        <div class="crm-row"><div class="k">Insight</div><div class="v">${c.insight}</div></div>
+        <div class="crm-row"><div class="k">CRM Objective</div><div class="v">${c.objective}</div></div>
+        <div class="crm-row"><div class="k">Action</div><div class="v">${c.action}</div></div>
+        <div class="crm-row"><div class="k">Channel</div><div class="v">${c.channel}</div></div>
+        <div class="crm-row"><div class="k">KPI</div><div class="v"><span class="kpi-chip">${c.kpi}</span></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // priority matrix placement
+  const cellMap = {"High|Low":"pm-hilo","High|Medium":"pm-hilo","High|High":"pm-hihi","Medium|Low":"pm-lolo","Medium|Medium":"pm-hilo","Medium|High":"pm-lohi","Low|Low":"pm-lolo","Low|High":"pm-lohi"};
+  // simpler explicit placement based on impact/effort combo per segment
+  const placement = {
+    "Moderate Utilizers": "pm-hilo", // High impact, Medium effort -> place in High/Low-ish quadrant (closest: High impact side)
+    "High-Risk Revolvers": "pm-hihi", // High impact, High effort
+    "Low-Balance Casual Spenders": "pm-lolo", // Medium impact, Low effort -> lower effort side
+    "Premium Transactors": "pm-hilo" // High impact, Medium effort
+  };
+  ["pm-hilo","pm-hihi","pm-lolo","pm-lohi"].forEach(id=>{
+    const cell = document.getElementById(id);
+    const label = cell.querySelector('.pm-cell-label').outerHTML;
+    cell.innerHTML = label;
+  });
+  SEG_ORDER.forEach(seg=>{
+    const cellId = placement[seg];
+    const cell = document.getElementById(cellId);
+    const chip = document.createElement('span');
+    chip.className = 'pm-chip';
+    chip.innerHTML = `<span class="seg-dot" style="background:${SEG_COLOR[seg]}"></span>${SEG_SHORT[seg]}`;
+    cell.appendChild(chip);
+  });
+}
+
+// ============ METHODOLOGY TAB ============
+function renderMethodCharts(){
+  const ks = DATA.k_eval.map(d=>d.k);
+  Plotly.newPlot('chart-method-elbow', [
+    {type:'scatter', mode:'lines+markers', name:'Silhouette score', x: ks, y: DATA.k_eval.map(d=>d.silhouette),
+     line:{color:'#1C7A5E'}, marker:{color: ks.map(k=>k===4?'#D68A1D':'#1C7A5E'), size:9},
+     hovertemplate:'k=%{x}<br>Silhouette: %{y:.3f}<extra></extra>'}
+  ], {
+    margin:{t:10,b:35,l:45,r:10}, xaxis:{title:'k (number of clusters)', dtick:1},
+    yaxis:{title:'Silhouette score', gridcolor:'#EEF2F5'}, font:{family:'inherit', size:11},
+    shapes:[{type:'line', x0:4, x1:4, y0:0, y1:0.4, line:{color:'#D68A1D', dash:'dot', width:1.5}}],
+    annotations:[{x:4, y:0.20, text:'k=4 selected', showarrow:false, font:{color:'#8A5A12', size:10.5}, bgcolor:'#FBF1DF'}]
+  }, {displayModeBar:false, responsive:true});
+
+  renderPCA('chart-method-pca');
+}
+
+// ============ RENDER ORCHESTRATION ============
+const rendered = {};
+function renderTabCharts(tab){
+  if(rendered[tab]) { window.dispatchEvent(new Event('resize')); return; }
+  rendered[tab] = true;
+  if(tab==='overview') renderOverviewCharts();
+  if(tab==='explorer'){ renderSegSelector(); renderPersona(); }
+  if(tab==='behavior'){ renderRadar(); renderPCA('chart-pca'); renderBoxplots(); renderMiniCharts(); }
+  if(tab==='value') renderValueRisk();
+  if(tab==='crm') renderCRMCards();
+  if(tab==='method') renderMethodCharts();
+}
+
+// initial render
+renderTabCharts('overview');
+window.addEventListener('resize', ()=>{
+  document.querySelectorAll('.section.active [id^="chart-"]').forEach(el=>{
+    try{ Plotly.Plots.resize(el); }catch(e){}
+  });
+});
+
+</script>
+</body>
+</html>
